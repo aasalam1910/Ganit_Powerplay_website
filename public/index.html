@@ -127,6 +127,9 @@ nav button.active{background:var(--ink);color:var(--bg)}
 .controls button:hover{border-color:var(--ink-faint)}
 .controls button.sel-win{background:var(--win-soft);border-color:var(--win);color:var(--win)}
 .controls button.sel-tie{background:var(--tie-soft);border-color:var(--tie);color:var(--tie)}
+.controls{align-items:center}
+.controls button.change-btn{background:none;border-color:transparent;color:var(--ink-faint);text-decoration:underline;padding:6px 4px}
+.controls button.change-btn:hover{color:var(--ink-soft)}
 .info-row{padding:11px 14px;font-size:13px;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace}
 .final-badge{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);font-weight:700}
 .teams-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-top:16px}
@@ -283,6 +286,8 @@ var finals = {};        // sportKey -> {finalistA, finalistB, winner}
 var activeTab = "overview";
 var canEdit = false;
 var pollTimer = null;
+var unlockedMatches = {};  // matchId -> true while re-editing a locked result
+var unlockedFinals = {};   // sportKey -> true while re-editing a locked final
 
 function getPin(){
   try{ return localStorage.getItem("powerplay_pin") || ""; }catch(e){ return ""; }
@@ -399,6 +404,7 @@ function postJSON(url, body){
 function writeMatch(matchId, winner){
   if(!canEdit) return;
   results[matchId] = {winner:winner};
+  delete unlockedMatches[matchId];
   render();
   postJSON("/api/match", {id:matchId, winner:winner, pin:getPin()});
 }
@@ -406,6 +412,7 @@ function writeFinal(sportKey, patch){
   if(!canEdit) return;
   var cur = finals[sportKey] || {};
   finals[sportKey] = Object.assign({}, cur, patch);
+  if("winner" in patch) delete unlockedFinals[sportKey];
   render();
   postJSON("/api/final", {sport:sportKey, patch:patch, pin:getPin()});
 }
@@ -553,11 +560,16 @@ function fixtureRow(sportKey, mt){
   var teamsHtml = '<span class="fx-teams"><span>'+esc(mt.teamA)+'</span><span class="vs">vs</span><span>'+esc(mt.teamB)+'</span></span>';
   var ctrls;
   if(canEdit){
-    ctrls = '<div class="controls">' +
-      '<button data-m="'+mt.id+'" data-w="A" class="'+(w==="A"?"sel-win":"")+'">'+esc(shortName(mt.teamA))+' won</button>' +
-      (sport.hasTie ? '<button data-m="'+mt.id+'" data-w="TIE" class="'+(w==="TIE"?"sel-tie":"")+'">Tie</button>' : '') +
-      '<button data-m="'+mt.id+'" data-w="B" class="'+(w==="B"?"sel-win":"")+'">'+esc(shortName(mt.teamB))+' won</button>' +
-    '</div>';
+    if(w && !unlockedMatches[mt.id]){
+      ctrls = '<div class="controls">' + resultStatus(w, mt.teamA, mt.teamB) +
+        '<button data-edit-match="'+mt.id+'" class="change-btn">Change</button></div>';
+    } else {
+      ctrls = '<div class="controls">' +
+        '<button data-m="'+mt.id+'" data-w="A" class="'+(w==="A"?"sel-win":"")+'">'+esc(shortName(mt.teamA))+' won</button>' +
+        (sport.hasTie ? '<button data-m="'+mt.id+'" data-w="TIE" class="'+(w==="TIE"?"sel-tie":"")+'">Tie</button>' : '') +
+        '<button data-m="'+mt.id+'" data-w="B" class="'+(w==="B"?"sel-win":"")+'">'+esc(shortName(mt.teamB))+' won</button>' +
+      '</div>';
+    }
   } else {
     ctrls = resultStatus(w, mt.teamA, mt.teamB);
   }
@@ -580,7 +592,11 @@ function finalRow(sportKey){
   var w = f.winner;
 
   var teamsHtml, ctrls;
-  if(canEdit){
+  if(canEdit && w && !unlockedFinals[sportKey]){
+    teamsHtml = '<span class="fx-teams"><span>'+esc(effA)+'</span><span class="vs">vs</span><span>'+esc(effB)+'</span></span>';
+    ctrls = '<div class="controls">' + resultStatus(w, effA, effB) +
+      '<button data-edit-final="'+sportKey+'" class="change-btn">Change</button></div>';
+  } else if(canEdit){
     var optsA = sport.groups[1].map(function(t){ return '<option value="'+esc(t)+'" '+(f.finalistA===t?"selected":"")+'>'+esc(t)+'</option>'; }).join("");
     var optsB = sport.groups[2].map(function(t){ return '<option value="'+esc(t)+'" '+(f.finalistB===t?"selected":"")+'>'+esc(t)+'</option>'; }).join("");
     teamsHtml = '<span class="fx-teams">' +
@@ -637,11 +653,23 @@ function attachHandlers(){
       writeMatch(id, cur === w ? null : w);
     });
   });
+  Array.prototype.forEach.call(document.querySelectorAll("button[data-edit-match]"), function(btn){
+    btn.addEventListener("click", function(){
+      unlockedMatches[btn.getAttribute("data-edit-match")] = true;
+      render();
+    });
+  });
   Array.prototype.forEach.call(document.querySelectorAll("button[data-final]"), function(btn){
     btn.addEventListener("click", function(){
       var sk = btn.getAttribute("data-final"), w = btn.getAttribute("data-w");
       var cur = finals[sk] && finals[sk].winner;
       writeFinal(sk, {winner: cur === w ? null : w});
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("button[data-edit-final]"), function(btn){
+    btn.addEventListener("click", function(){
+      unlockedFinals[btn.getAttribute("data-edit-final")] = true;
+      render();
     });
   });
   Array.prototype.forEach.call(document.querySelectorAll("select[data-finalist]"), function(sel){
