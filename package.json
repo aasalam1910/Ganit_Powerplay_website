@@ -1,0 +1,9 @@
+{
+  "name": "ganit-powerplay-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Live fixtures, scores and standings tracker for Ganit Powerplay Sports Day 2026.",
+  "dependencies": {
+    "@vercel/blob": "^2.8.0"
+  }
+}

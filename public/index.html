@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Powerplay Tracker</title>
+<link rel="icon" href="/assets/ganit-wordmark.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  /* Ganit brand: indigo-blue + flame orange, sampled from the Powerplay logo */
+  --bg:#FFFFFF;
+  --surface:#FFFFFF;
+  --surface-2:#F1EFFC;
+  --ink:#13141F;
+  --ink-soft:#585C72;
+  --ink-faint:#9396A8;
+  --line:#E2E1F0;
+  --brand:#1A00D9;
+  --accent:#FF6D06;
+  --accent-ink:#FFFFFF;
+  --group1:#1A00D9;
+  --group1-soft:#EDEBFC;
+  --group2:#FF6D06;
+  --group2-soft:#FFEEE1;
+  --win:#1F8A4C;
+  --win-soft:#E7F5EC;
+  --loss:#D1483C;
+  --loss-soft:#FBEAE8;
+  --tie:#B9821E;
+  --tie-soft:#FBF1DC;
+  --shadow:0 1px 2px rgba(26,0,217,0.05),0 6px 18px rgba(26,0,217,0.06);
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg);color:var(--ink);
+  font-family:'IBM Plex Sans',system-ui,sans-serif;
+  padding-inline:16px;
+  -webkit-font-smoothing:antialiased;
+}
+img{max-width:100%}
+[hidden]{display:none!important}
+.wrap{max-width:1080px;margin:0 auto;padding-block:16px 48px}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:'Big Shoulders Display',sans-serif;font-weight:800;letter-spacing:.2px;text-wrap:balance;margin:0}
+.masthead{
+  position:sticky;top:env(safe-area-inset-top,0px);z-index:10;
+  background:var(--bg);padding-block:14px 0;margin-inline:-16px;padding-inline:16px;
+  border-bottom:1px solid var(--line);
+}
+.masthead-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px}
+.brand img{height:54px;width:auto;display:block}
+.brand > div{display:flex;flex-direction:column;gap:4px}
+.brand h1{font-size:clamp(18px,4vw,24px);line-height:1;color:var(--brand)}
+.brand .tag{background:var(--accent);color:var(--accent-ink);font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:10.5px;letter-spacing:.06em;padding:3px 7px;border-radius:4px;text-transform:uppercase;width:fit-content}
+.dates{color:var(--ink-soft);font-size:13px;font-family:'IBM Plex Mono',monospace}
+.sync{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--ink-faint)}
+.dot.live{background:var(--win)}
+.dot.err{background:var(--loss)}
+nav{display:flex;gap:4px;overflow-x:auto;padding-block:12px;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{
+  flex:0 0 auto;border:1px solid transparent;background:none;color:var(--ink-soft);
+  font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:13.5px;
+  padding:8px 13px;border-radius:7px;cursor:pointer;white-space:nowrap;
+}
+nav button:hover{background:var(--surface-2)}
+nav button.active{background:var(--ink);color:var(--bg)}
+.lede{color:var(--ink-soft);font-size:14px;margin:6px 0 20px;max-width:620px;line-height:1.5}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:640px){.grid2{grid-template-columns:1fr}}
+.section-title{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
+.section-title h2{font-size:20px}
+.section-title .sub{font-size:12px;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace}
+.leaderboard{width:100%;border-collapse:collapse}
+.leaderboard th,.leaderboard td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line)}
+.leaderboard th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600}
+.leaderboard tr:last-child td{border-bottom:none}
+.leaderboard td.num,.leaderboard th.num{text-align:right;font-family:'IBM Plex Mono',monospace}
+.rank{font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:18px;color:var(--ink-faint);width:28px;display:inline-block}
+.rank.top{color:var(--accent)}
+.team-name{font-weight:600}
+.pts{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:15px}
+.trophy-row{display:flex;gap:14px;margin-top:16px;flex-wrap:wrap}
+.trophy-card{flex:1;min-width:220px;padding:16px;text-align:center}
+.trophy-card .label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);margin-bottom:6px}
+.trophy-score{font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:40px;display:flex;align-items:center;justify-content:center;gap:14px}
+.trophy-score .g1{color:var(--group1)}
+.trophy-score .g2{color:var(--group2)}
+.trophy-score .vs{font-size:16px;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace}
+.finals-strip{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.chip{font-size:12px;padding:6px 10px;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);background:var(--surface)}
+.chip.done{border-color:var(--win);color:var(--win);background:var(--win-soft)}
+.sport-intro{padding:16px 18px;margin-bottom:16px}
+.sport-intro .fmt{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink-soft)}
+.group-table{width:100%;border-collapse:collapse;font-size:14px}
+.group-table th,.group-table td{padding:8px 9px;border-bottom:1px solid var(--line);text-align:center}
+.group-table th{font-size:10.5px;text-transform:uppercase;color:var(--ink-faint);letter-spacing:.05em}
+.group-table td:first-child,.group-table th:first-child{text-align:left}
+.group-table tbody tr:first-child td{background:var(--win-soft)}
+.group-head{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);font-weight:700;font-size:13px}
+.g-tag{font-size:10px;text-transform:uppercase;letter-spacing:.05em;padding:2px 7px;border-radius:4px;font-weight:700}
+.g-tag.g1{background:var(--group1-soft);color:var(--group1)}
+.g-tag.g2{background:var(--group2-soft);color:var(--group2)}
+.fixtures{margin-top:22px;display:flex;flex-direction:column;gap:10px}
+.fixture{padding:13px 14px;display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between}
+.fixture.final{border:1.5px solid var(--accent)}
+.fx-meta{display:flex;flex-direction:column;gap:2px;min-width:120px}
+.fx-date{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-faint)}
+.fx-teams{display:flex;align-items:center;gap:8px;font-weight:600;font-size:15px;flex:1;min-width:200px}
+.fx-teams .vs{color:var(--ink-faint);font-weight:500;font-size:12px;font-family:'IBM Plex Mono',monospace}
+.fx-teams select{font:inherit;font-weight:600;padding:5px 7px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.controls{display:flex;gap:6px;flex-wrap:wrap}
+.controls button{
+  font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:12.5px;
+  border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);
+  padding:7px 11px;border-radius:6px;cursor:pointer;
+}
+.controls button:hover{border-color:var(--ink-faint)}
+.controls button.sel-win{background:var(--win-soft);border-color:var(--win);color:var(--win)}
+.controls button.sel-tie{background:var(--tie-soft);border-color:var(--tie);color:var(--tie)}
+.info-row{padding:11px 14px;font-size:13px;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace}
+.final-badge{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);font-weight:700}
+.teams-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-top:16px}
+.team-card{padding:14px}
+.team-card h3{font-size:17px;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.roster{margin:0;padding:0;list-style:none;font-size:13px;color:var(--ink-soft);line-height:1.65}
+.banner{padding:10px 14px;font-size:13px;border-radius:8px;margin-bottom:16px;background:var(--tie-soft);color:var(--tie);border:1px solid var(--tie)}
+.status-badge{font-size:12.5px;font-weight:600;padding:6px 11px;border-radius:6px}
+.status-badge.win{background:var(--win-soft);color:var(--win)}
+.status-badge.tie{background:var(--tie-soft);color:var(--tie)}
+.status-pending{font-size:12.5px;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace}
+.pin-wrap{position:relative;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.perm-btn{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;padding:3px 8px;border-radius:20px;border:1px solid var(--line);background:none;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace;cursor:pointer}
+.perm-btn.on{border-color:var(--win);color:var(--win);background:var(--win-soft)}
+.pin-panel{position:absolute;top:calc(100% + 8px);right:0;z-index:20;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:12px;width:200px;display:flex;flex-direction:column;gap:6px}
+.pin-panel label{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint)}
+.pin-row{display:flex;gap:6px}
+.pin-row input{flex:1;min-width:0;font:inherit;font-family:'IBM Plex Mono',monospace;letter-spacing:.2em;padding:7px 9px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.pin-row button{font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:12.5px;border:1px solid var(--brand);background:var(--brand);color:#fff;padding:7px 11px;border-radius:6px;cursor:pointer}
+.pin-error{font-size:12px;color:var(--loss)}
+footer{color:var(--ink-faint);font-size:12px;margin-top:36px;line-height:1.7}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="masthead">
+    <div class="masthead-top">
+      <div class="brand"><img src="/assets/powerplay-logo.png" alt="Ganit Powerplay"><div><h1>Live Tracker</h1><span class="tag">Sports Day 2026</span></div></div>
+      <div class="pin-wrap">
+        <span class="dates">Sep 16 &ndash; Oct 3</span>
+        <span class="sync"><span class="dot" id="syncDot"></span><span id="syncText">connecting&hellip;</span></span>
+        <button class="perm-btn" id="permBtn" type="button"></button>
+        <div class="pin-panel" id="pinPanel" hidden>
+          <label for="pinInput">Scoring PIN</label>
+          <div class="pin-row">
+            <input type="password" inputmode="numeric" autocomplete="off" id="pinInput" placeholder="••••">
+            <button type="button" id="pinSubmit">Unlock</button>
+          </div>
+          <span class="pin-error" id="pinError" hidden></span>
+        </div>
+      </div>
+    </div>
+    <nav id="tabNav"></nav>
+  </div>
+
+  <div id="panels"></div>
+
+  <footer>
+    Win = 2 pts &middot; Loss = 0 pts &middot; Tie = 1 pt each (Cricket &amp; Badminton only). Scores sync live for everyone with this link; only the PIN holder can enter results.
+  </footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+var TEAMS = ["Prime Hustlers","The OOO Outlaws","Team Nexus","Barely Athletic","Schema Stars","Super Strikers"];
+
+var ROSTERS = {
+  "Prime Hustlers": ["Shyam Nachiketh P","Harshavarthini","Shriram Vayalur","Hari Hara Priyan S","P Logesh","Alen Maria Nirmal Rayappan","Satyam","Vishnu Gowtham","Yashwant A","Pavithra Hari","Neha Sarah","S Keerthivasan","Avinash"],
+  "The OOO Outlaws": ["Aryan Thapa","Kavya AR","Nasar","Charless Binny Kumaravel","Charulatha M","Shivani Singh","Adithya Aravindan","Sibbala Chandana","Vinay Nandiwardhan Konkathi","Melvin Salvius Irudayaraj","Deepanshu Gond","Veera Katam Goutham","Baljeet Singh"],
+  "Team Nexus": ["T Prashanth","Fathima Devasahayam","Sivaganapathy S","Guru T S","Surya Sivakumar","Sumit Mittal","Aarthi M","Madhan Sai V","Shaik Sameer Babu","Varsha A","Prithviram S N","Saikrishna J","Surya Pratap Singh"],
+  "Barely Athletic": ["Surya G M","Rishi Kota Vardhan","Sumiya Roshan","Benny Charles","Deepika Ravichandran","Sowmya G","Pravin Moses Gladvin","Aaditya S","Bharath R C","Nadursha Shaik","M Chakravarthiraj","Aakash Arasu","Karthiha M"],
+  "Schema Stars": ["Venkataraman R","Asishh Korukonda","J M Nivethitha","Kamlesh Reddy Chennuru","Tina Kashyap","S K Renganathan","Shashank Reddy Mopuru","Padmasree T","Shaik Mahammed Lateef","Kannan Gnanasekaran","Adnan Abdul Salam Mohamed","Sarvesh Babu R G","Vasanthkumar"],
+  "Super Strikers": ["Vinay Vikram","Nekkalla Vinay","Athika A","T S Gowtham","Rohit Bala R","Raunak Mangal","Marella Raghava Reddy","Lagisetty Sai Rishitha","Sejal Jha","Nikhil Reddy Gaddam","Arindrajit Maity","Sivabalaji S","Simran Swain","Dinesh"]
+};
+function m(date,group,teamA,teamB,time,extra){
+  return {date:date,group:group,teamA:teamA,teamB:teamB,time:time,extra:extra||""};
+}
+
+var SPORTS = {
+  cricket: {
+    label:"Cricket", short:"CKT", hasTie:true,
+    format:"7 vs 7 · 7 overs/side · 4:00–8:00 PM",
+    groups:{1:["Barely Athletic","Schema Stars","Super Strikers"],2:["Prime Hustlers","The OOO Outlaws","Team Nexus"]},
+    matches:[
+      m("Sat, Sep 19","1","Barely Athletic","Schema Stars","4:00–5:00 PM"),
+      m("Sat, Sep 19","1","Barely Athletic","Super Strikers","5:00–6:00 PM"),
+      m("Sat, Sep 19","1","Schema Stars","Super Strikers","6:00–7:00 PM"),
+      m("Sun, Sep 20","2","Prime Hustlers","The OOO Outlaws","4:00–5:00 PM"),
+      m("Sun, Sep 20","2","Prime Hustlers","Team Nexus","5:00–6:00 PM"),
+      m("Sun, Sep 20","2","The OOO Outlaws","Team Nexus","6:00–7:00 PM")
+    ],
+    final:{date:"Sat, Oct 3",time:"4:00–4:45 PM",note:"Group 1 top team vs Group 2 top team"}
+  },
+  badminton: {
+    label:"Badminton", short:"BDM", hasTie:true,
+    format:"21-pt games · 4 games/tie · 4:00–8:00 PM",
+    groups:{1:["Barely Athletic","Prime Hustlers","The OOO Outlaws"],2:["Team Nexus","Schema Stars","Super Strikers"]},
+    matches:[
+      m("Sat, Sep 26","1","Barely Athletic","Prime Hustlers","4:00–5:20 PM","Court 1"),
+      m("Sat, Sep 26","1","Barely Athletic","The OOO Outlaws","5:20–6:40 PM","Court 1"),
+      m("Sat, Sep 26","1","Prime Hustlers","The OOO Outlaws","6:40–8:00 PM","Court 1"),
+      m("Sat, Sep 26","2","Team Nexus","Schema Stars","4:00–5:20 PM","Court 2"),
+      m("Sat, Sep 26","2","Team Nexus","Super Strikers","5:20–6:40 PM","Court 2"),
+      m("Sat, Sep 26","2","Schema Stars","Super Strikers","6:40–8:00 PM","Court 2")
+    ],
+    final:{date:"Sat, Sep 26",time:"8:00–9:20 PM",note:"Group 1 top team vs Group 2 top team · Court 1"}
+  },
+  chess: {
+    label:"Chess", short:"CHS", hasTie:false,
+    format:"1 vs 1 · 15 min/game · 5:00–6:00 PM",
+    groups:{1:["Prime Hustlers","Team Nexus","Barely Athletic"],2:["The OOO Outlaws","Schema Stars","Super Strikers"]},
+    matches:[
+      m("Mon, Sep 21","2","The OOO Outlaws","Schema Stars",""),
+      m("Mon, Sep 21","2","The OOO Outlaws","Super Strikers",""),
+      m("Mon, Sep 21","1","Prime Hustlers","Team Nexus",""),
+      m("Mon, Sep 21","1","Prime Hustlers","Barely Athletic",""),
+      m("Wed, Sep 23","2","Schema Stars","Super Strikers",""),
+      m("Wed, Sep 23","1","Team Nexus","Barely Athletic","")
+    ],
+    info:[{date:"Wed, Sep 23",text:"Online Group — 8 players (pooled into team rosters)"}],
+    final:{date:"Fri, Sep 25",time:"",note:"Group 2 winner vs Group 1 winner · finalist teams nominate a rep"}
+  },
+  carrom: {
+    label:"Carrom", short:"CRM", hasTie:false,
+    format:"2 vs 2 doubles · 20 min/match · 5:00–6:00 PM",
+    groups:{1:["Prime Hustlers","Team Nexus","Schema Stars"],2:["The OOO Outlaws","Barely Athletic","Super Strikers"]},
+    matches:[
+      m("Wed, Sep 16","2","The OOO Outlaws","Barely Athletic",""),
+      m("Wed, Sep 16","2","Barely Athletic","Super Strikers",""),
+      m("Wed, Sep 16","1","Prime Hustlers","Team Nexus",""),
+      m("Fri, Sep 18","2","The OOO Outlaws","Super Strikers",""),
+      m("Fri, Sep 18","1","Prime Hustlers","Schema Stars",""),
+      m("Fri, Sep 18","1","Team Nexus","Schema Stars","")
+    ],
+    final:{date:"TBD",time:"",note:"Group 2 winner vs Group 1 winner · date not yet assigned"}
+  },
+  fifa: {
+    label:"FIFA (PS5)", short:"FFA", hasTie:false,
+    format:"2 vs 2 · reps pair up · 5:00–6:00 PM",
+    groups:{1:["Prime Hustlers","Barely Athletic","Schema Stars"],2:["The OOO Outlaws","Team Nexus","Super Strikers"]},
+    matches:[
+      m("Mon, Sep 28","2","The OOO Outlaws","Team Nexus",""),
+      m("Mon, Sep 28","2","The OOO Outlaws","Super Strikers",""),
+      m("Mon, Sep 28","2","Team Nexus","Super Strikers",""),
+      m("Tue, Sep 29","1","Prime Hustlers","Barely Athletic",""),
+      m("Tue, Sep 29","1","Prime Hustlers","Schema Stars",""),
+      m("Tue, Sep 29","1","Barely Athletic","Schema Stars","")
+    ],
+    final:{date:"Wed, Sep 30",time:"",note:"Group 2 winner vs Group 1 winner"}
+  }
+};
+var SPORT_ORDER = ["cricket","badminton","chess","carrom","fifa"];
+
+SPORT_ORDER.forEach(function(k){
+  SPORTS[k].matches.forEach(function(mt,i){ mt.id = k+"-"+i; });
+});
+
+// ---------- state ----------
+var results = {};      // matchId -> {winner:'A'|'B'|'TIE'}
+var finals = {};        // sportKey -> {finalistA, finalistB, winner}
+var activeTab = "overview";
+var canEdit = false;
+var pollTimer = null;
+
+function getPin(){
+  try{ return localStorage.getItem("powerplay_pin") || ""; }catch(e){ return ""; }
+}
+function setPin(pin){
+  try{ if(pin) localStorage.setItem("powerplay_pin", pin); else localStorage.removeItem("powerplay_pin"); }catch(e){}
+}
+
+function updatePermBtn(){
+  var btn = document.getElementById("permBtn");
+  btn.className = "perm-btn" + (canEdit ? " on" : "");
+  btn.textContent = canEdit ? "Scoring unlocked · lock" : "Enter PIN to score";
+}
+
+function checkPin(pin){
+  return fetch("/api/auth", {
+    method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({pin:pin})
+  }).then(function(r){ return r.json(); }).then(function(d){ return !!d.ok; }).catch(function(){ return false; });
+}
+
+var pinPanel = document.getElementById("pinPanel");
+var pinInput = document.getElementById("pinInput");
+var pinError = document.getElementById("pinError");
+
+function showPinError(msg){
+  pinError.textContent = msg;
+  pinError.hidden = false;
+}
+function openPinPanel(){
+  pinError.hidden = true;
+  pinInput.value = "";
+  pinPanel.hidden = false;
+  pinInput.focus();
+}
+function closePinPanel(){
+  pinPanel.hidden = true;
+}
+
+function submitPin(){
+  var pin = pinInput.value.trim();
+  if(!pin) return;
+  checkPin(pin).then(function(ok){
+    if(ok){ setPin(pin); canEdit = true; updatePermBtn(); closePinPanel(); render(); }
+    else { showPinError("Incorrect PIN — try again."); }
+  });
+}
+
+document.getElementById("permBtn").addEventListener("click", function(){
+  if(canEdit){
+    setPin("");
+    canEdit = false;
+    updatePermBtn();
+    render();
+  } else if(pinPanel.hidden){
+    openPinPanel();
+  } else {
+    closePinPanel();
+  }
+});
+document.getElementById("pinSubmit").addEventListener("click", submitPin);
+pinInput.addEventListener("keydown", function(e){ if(e.key === "Enter") submitPin(); });
+document.addEventListener("click", function(e){
+  if(!pinPanel.hidden && !pinPanel.contains(e.target) && e.target.id !== "permBtn"){
+    closePinPanel();
+  }
+});
+
+function loadPermissions(){
+  var pin = getPin();
+  if(!pin){ updatePermBtn(); return; }
+  checkPin(pin).then(function(ok){
+    canEdit = ok;
+    if(!ok) setPin("");
+    updatePermBtn();
+    render();
+  });
+}
+
+function setSync(state,text){
+  var dot = document.getElementById("syncDot");
+  var txt = document.getElementById("syncText");
+  dot.className = "dot" + (state?(" "+state):"");
+  txt.textContent = text;
+}
+
+function applyState(d){
+  results = d.results || {};
+  finals = d.finals || {};
+  render();
+}
+
+function poll(){
+  fetch("/api/state", {cache:"no-store"}).then(function(r){ return r.json(); }).then(function(d){
+    applyState(d);
+    setSync("live","synced live");
+  }).catch(function(){ setSync("err","reconnecting…"); });
+}
+
+function connect(){
+  poll();
+  if(pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(poll, 4000);
+}
+
+function postJSON(url, body){
+  return fetch(url, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)})
+    .then(function(r){
+      if(r.status === 403){ canEdit = false; setPin(""); updatePermBtn(); setSync("err","PIN no longer valid — re-enter it"); render(); }
+      return r;
+    })
+    .catch(function(){ setSync("err","save failed — retry"); });
+}
+
+function writeMatch(matchId, winner){
+  if(!canEdit) return;
+  results[matchId] = {winner:winner};
+  render();
+  postJSON("/api/match", {id:matchId, winner:winner, pin:getPin()});
+}
+function writeFinal(sportKey, patch){
+  if(!canEdit) return;
+  var cur = finals[sportKey] || {};
+  finals[sportKey] = Object.assign({}, cur, patch);
+  render();
+  postJSON("/api/final", {sport:sportKey, patch:patch, pin:getPin()});
+}
+
+// ---------- standings ----------
+function groupTable(sportKey, groupNum){
+  var sport = SPORTS[sportKey];
+  var teams = sport.groups[groupNum];
+  var t = {};
+  teams.forEach(function(tm){ t[tm] = {team:tm,p:0,w:0,l:0,tie:0,pts:0}; });
+  sport.matches.forEach(function(mt){
+    if(mt.group != groupNum) return;
+    var res = results[mt.id];
+    if(!res || !res.winner) return;
+    var a = t[mt.teamA], b = t[mt.teamB];
+    a.p++; b.p++;
+    if(res.winner === "A"){ a.w++; a.pts+=2; b.l++; }
+    else if(res.winner === "B"){ b.w++; b.pts+=2; a.l++; }
+    else if(res.winner === "TIE"){ a.tie++; b.tie++; a.pts+=1; b.pts+=1; }
+  });
+  return teams.map(function(tm){ return t[tm]; }).sort(function(x,y){ return y.pts - x.pts; });
+}
+
+function groupLeader(sportKey, groupNum){
+  var table = groupTable(sportKey, groupNum);
+  var sport = SPORTS[sportKey];
+  var playedAll = sport.matches.filter(function(mt){ return mt.group == groupNum; })
+    .every(function(mt){ return results[mt.id] && results[mt.id].winner; });
+  if(!playedAll) return null;
+  if(table.length > 1 && table[0].pts === table[1].pts) return null;
+  return table[0].team;
+}
+
+function overallScores(){
+  var totals = {};
+  TEAMS.forEach(function(t){ totals[t] = {team:t,pts:0,w:0,l:0,tie:0}; });
+  SPORT_ORDER.forEach(function(sk){
+    var sport = SPORTS[sk];
+    sport.matches.forEach(function(mt){
+      var res = results[mt.id];
+      if(!res || !res.winner) return;
+      if(res.winner === "A"){ totals[mt.teamA].w++; totals[mt.teamA].pts+=2; totals[mt.teamB].l++; }
+      else if(res.winner === "B"){ totals[mt.teamB].w++; totals[mt.teamB].pts+=2; totals[mt.teamA].l++; }
+      else if(res.winner === "TIE"){ totals[mt.teamA].tie++; totals[mt.teamB].tie++; totals[mt.teamA].pts+=1; totals[mt.teamB].pts+=1; }
+    });
+    var f = finals[sk];
+    if(f && f.finalistA && f.finalistB && f.winner){
+      var winTeam = f.winner === "A" ? f.finalistA : f.finalistB;
+      var loseTeam = f.winner === "A" ? f.finalistB : f.finalistA;
+      if(totals[winTeam]){ totals[winTeam].w++; totals[winTeam].pts+=2; }
+      if(totals[loseTeam]){ totals[loseTeam].l++; }
+    }
+  });
+  return TEAMS.map(function(t){ return totals[t]; }).sort(function(a,b){ return b.pts - a.pts; });
+}
+
+function trophyTally(){
+  var g1 = 0, g2 = 0, decided = 0;
+  SPORT_ORDER.forEach(function(sk){
+    var f = finals[sk];
+    if(!f || !f.finalistA || !f.finalistB || !f.winner) return;
+    var sport = SPORTS[sk];
+    var winTeam = f.winner === "A" ? f.finalistA : f.finalistB;
+    decided++;
+    if(sport.groups[1].indexOf(winTeam) !== -1) g1++;
+    else if(sport.groups[2].indexOf(winTeam) !== -1) g2++;
+  });
+  return {g1:g1,g2:g2,decided:decided,total:SPORT_ORDER.length};
+}
+
+// ---------- render helpers ----------
+function esc(s){ return String(s).replace(/[&<>]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c]; }); }
+
+function renderTabs(){
+  var nav = document.getElementById("tabNav");
+  var tabs = [["overview","Overview"]].concat(SPORT_ORDER.map(function(k){ return [k, SPORTS[k].label]; })).concat([["teams","Teams"]]);
+  nav.innerHTML = tabs.map(function(t){
+    return '<button data-tab="'+t[0]+'" class="'+(t[0]===activeTab?"active":"")+'">'+esc(t[1])+'</button>';
+  }).join("");
+  Array.prototype.forEach.call(nav.querySelectorAll("button"), function(btn){
+    btn.addEventListener("click", function(){ activeTab = btn.getAttribute("data-tab"); render(); });
+  });
+}
+
+function renderOverview(){
+  var scores = overallScores();
+  var trophy = trophyTally();
+  var rows = scores.map(function(s,i){
+    return '<tr><td><span class="rank'+(i===0&&s.pts>0?" top":"")+'">'+(i+1)+'</span></td>'+
+      '<td class="team-name">'+esc(s.team)+'</td>'+
+      '<td class="num mono">'+s.w+'</td><td class="num mono">'+s.l+'</td><td class="num mono">'+s.tie+'</td>'+
+      '<td class="num pts">'+s.pts+'</td></tr>';
+  }).join("");
+
+  var finalsStrip = SPORT_ORDER.map(function(sk){
+    var f = finals[sk];
+    var done = f && f.winner && f.finalistA && f.finalistB;
+    var txt = SPORTS[sk].label + (done ? ": " + (f.winner==="A"?f.finalistA:f.finalistB) : "");
+    return '<span class="chip'+(done?" done":"")+'">'+esc(txt)+'</span>';
+  }).join("");
+
+  return '' +
+  '<div class="section-title"><h2>Overall Leaderboard</h2><span class="sub">points across all 5 sports</span></div>' +
+  '<div class="card"><table class="leaderboard">' +
+  '<thead><tr><th></th><th>Team</th><th class="num">W</th><th class="num">L</th><th class="num">T</th><th class="num">Pts</th></tr></thead>' +
+  '<tbody>'+rows+'</tbody></table></div>' +
+
+  '<div class="section-title" style="margin-top:26px"><h2>Overall Sports Day Trophy</h2><span class="sub">most sport-final wins, by group</span></div>' +
+  '<div class="trophy-row">' +
+    '<div class="card trophy-card"><div class="label">Finals decided</div>' +
+      '<div class="trophy-score" style="font-size:28px">'+trophy.decided+' / '+trophy.total+'</div></div>' +
+    '<div class="card trophy-card" style="flex:2"><div class="label">Group 1 vs Group 2</div>' +
+      '<div class="trophy-score"><span class="g1">'+trophy.g1+'</span><span class="vs">FINALS WON</span><span class="g2">'+trophy.g2+'</span></div></div>' +
+  '</div>' +
+  '<div class="finals-strip">'+finalsStrip+'</div>' +
+  (Object.keys(results).length===0 && Object.keys(finals).length===0 ? '<div class="banner" style="margin-top:20px">No scores entered yet. Tables and the leaderboard update instantly for everyone as results come in.</div>' : '');
+}
+
+function renderGroupTable(sportKey, groupNum){
+  var sport = SPORTS[sportKey];
+  var table = groupTable(sportKey, groupNum);
+  var cols = sport.hasTie ? ["P","W","L","T","Pts"] : ["P","W","L","Pts"];
+  var head = '<tr><th>Team</th>'+cols.map(function(c){return '<th>'+c+'</th>';}).join("")+'</tr>';
+  var body = table.map(function(r){
+    var cells = sport.hasTie ? [r.p,r.w,r.l,r.tie,r.pts] : [r.p,r.w,r.l,r.pts];
+    return '<tr><td class="team-name">'+esc(r.team)+'</td>'+cells.map(function(c,i){return '<td class="mono'+(i===cells.length-1?" pts":"")+'">'+c+'</td>';}).join("")+'</tr>';
+  }).join("");
+  return '<div class="card">' +
+    '<div class="group-head"><span class="g-tag g'+groupNum+'">Group '+groupNum+'</span></div>' +
+    '<table class="group-table"><thead>'+head+'</thead><tbody>'+body+'</tbody></table>' +
+  '</div>';
+}
+
+function resultStatus(winner, teamA, teamB){
+  if(!winner) return '<span class="status-pending">Not yet played</span>';
+  if(winner === "TIE") return '<span class="status-badge tie">Tied</span>';
+  var name = winner === "A" ? teamA : teamB;
+  return '<span class="status-badge win">'+esc(shortName(name))+' won</span>';
+}
+
+function fixtureRow(sportKey, mt){
+  var sport = SPORTS[sportKey];
+  var res = results[mt.id] || {};
+  var w = res.winner;
+  var teamsHtml = '<span class="fx-teams"><span>'+esc(mt.teamA)+'</span><span class="vs">vs</span><span>'+esc(mt.teamB)+'</span></span>';
+  var ctrls;
+  if(canEdit){
+    ctrls = '<div class="controls">' +
+      '<button data-m="'+mt.id+'" data-w="A" class="'+(w==="A"?"sel-win":"")+'">'+esc(shortName(mt.teamA))+' won</button>' +
+      (sport.hasTie ? '<button data-m="'+mt.id+'" data-w="TIE" class="'+(w==="TIE"?"sel-tie":"")+'">Tie</button>' : '') +
+      '<button data-m="'+mt.id+'" data-w="B" class="'+(w==="B"?"sel-win":"")+'">'+esc(shortName(mt.teamB))+' won</button>' +
+    '</div>';
+  } else {
+    ctrls = resultStatus(w, mt.teamA, mt.teamB);
+  }
+  return '<div class="fixture card"><div class="fx-meta"><span class="fx-date">'+esc(mt.date)+(mt.time?" · "+esc(mt.time):"")+'</span>'+(mt.extra?'<span class="fx-date">'+esc(mt.extra)+'</span>':'')+'</div>'+teamsHtml+ctrls+'</div>';
+}
+
+function shortName(name){
+  var map = {"Prime Hustlers":"Prime Hustlers","The OOO Outlaws":"OOO Outlaws","Team Nexus":"Team Nexus","Barely Athletic":"Barely Athletic","Schema Stars":"Schema Stars","Super Strikers":"Super Strikers"};
+  return map[name] || name;
+}
+
+function finalRow(sportKey){
+  var sport = SPORTS[sportKey];
+  var f = finals[sportKey] || {};
+  var leader1 = groupLeader(sportKey, 1);
+  var leader2 = groupLeader(sportKey, 2);
+  var effA = f.finalistA || leader1 || "";
+  var effB = f.finalistB || leader2 || "";
+  var canDecide = effA && effB;
+  var w = f.winner;
+
+  var teamsHtml, ctrls;
+  if(canEdit){
+    var optsA = sport.groups[1].map(function(t){ return '<option value="'+esc(t)+'" '+(f.finalistA===t?"selected":"")+'>'+esc(t)+'</option>'; }).join("");
+    var optsB = sport.groups[2].map(function(t){ return '<option value="'+esc(t)+'" '+(f.finalistB===t?"selected":"")+'>'+esc(t)+'</option>'; }).join("");
+    teamsHtml = '<span class="fx-teams">' +
+      '<select data-finalist="'+sportKey+'" data-slot="A"><option value="">Group 1 finalist</option>'+optsA+'</select>' +
+      '<span class="vs">vs</span>' +
+      '<select data-finalist="'+sportKey+'" data-slot="B"><option value="">Group 2 finalist</option>'+optsB+'</select>' +
+    '</span>';
+    ctrls = canDecide ? (
+      '<div class="controls">' +
+        '<button data-final="'+sportKey+'" data-w="A" class="'+(w==="A"?"sel-win":"")+'">'+esc(shortName(effA))+' won</button>' +
+        '<button data-final="'+sportKey+'" data-w="B" class="'+(w==="B"?"sel-win":"")+'">'+esc(shortName(effB))+' won</button>' +
+      '</div>'
+    ) : '<span class="fx-date">awaiting group results</span>';
+  } else {
+    teamsHtml = effA && effB
+      ? '<span class="fx-teams"><span>'+esc(effA)+'</span><span class="vs">vs</span><span>'+esc(effB)+'</span></span>'
+      : '<span class="fx-date">finalists not yet decided</span>';
+    ctrls = canDecide ? resultStatus(w, effA, effB) : '';
+  }
+
+  return '<div class="fixture final card">' +
+    '<div class="fx-meta"><span class="final-badge">Final</span><span class="fx-date">'+esc(sport.final.date)+(sport.final.time?" · "+esc(sport.final.time):"")+'</span></div>' +
+    teamsHtml +
+    ctrls +
+  '</div>';
+}
+
+function renderSport(sportKey){
+  var sport = SPORTS[sportKey];
+  var fixtures = sport.matches.map(function(mt){ return fixtureRow(sportKey, mt); }).join("");
+  var info = (sport.info||[]).map(function(i){ return '<div class="info-row card">'+esc(i.date)+' — '+esc(i.text)+'</div>'; }).join("");
+  return '' +
+  '<div class="card sport-intro"><div class="fmt">'+esc(sport.format)+'</div></div>' +
+  '<div class="section-title"><h2>Group Standings</h2><span class="sub">win 2 &middot; loss 0'+(sport.hasTie?" &middot; tie 1 each":"")+'</span></div>' +
+  '<div class="grid2">'+renderGroupTable(sportKey,1)+renderGroupTable(sportKey,2)+'</div>' +
+  '<div class="section-title" style="margin-top:26px"><h2>Fixtures</h2><span class="sub">'+(canEdit?"tap a result to record it":"live results")+'</span></div>' +
+  '<div class="fixtures">'+fixtures+info+finalRow(sportKey)+'</div>' +
+  '<div class="card" style="margin-top:16px;padding:12px 14px;font-size:13px;color:var(--ink-soft)">'+esc(sport.final.note)+'</div>';
+}
+
+function renderTeams(){
+  var cards = TEAMS.map(function(t){
+    var members = ROSTERS[t].map(function(p){ return '<li>'+esc(p)+'</li>'; }).join("");
+    return '<div class="card team-card"><h3>'+esc(t)+'</h3><ul class="roster">'+members+'</ul></div>';
+  }).join("");
+  return '<div class="section-title"><h2>Teams</h2><span class="sub">6 teams &middot; 13–14 members each</span></div><div class="teams-grid">'+cards+'</div>';
+}
+
+function attachHandlers(){
+  Array.prototype.forEach.call(document.querySelectorAll("button[data-m]"), function(btn){
+    btn.addEventListener("click", function(){
+      var id = btn.getAttribute("data-m"), w = btn.getAttribute("data-w");
+      var cur = results[id] && results[id].winner;
+      writeMatch(id, cur === w ? null : w);
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("button[data-final]"), function(btn){
+    btn.addEventListener("click", function(){
+      var sk = btn.getAttribute("data-final"), w = btn.getAttribute("data-w");
+      var cur = finals[sk] && finals[sk].winner;
+      writeFinal(sk, {winner: cur === w ? null : w});
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("select[data-finalist]"), function(sel){
+    sel.addEventListener("change", function(){
+      var sk = sel.getAttribute("data-finalist"), slot = sel.getAttribute("data-slot");
+      var patch = {};
+      patch[slot === "A" ? "finalistA" : "finalistB"] = sel.value || null;
+      writeFinal(sk, patch);
+    });
+  });
+}
+
+function render(){
+  renderTabs();
+  var el = document.getElementById("panels");
+  if(activeTab === "overview") el.innerHTML = renderOverview();
+  else if(activeTab === "teams") el.innerHTML = renderTeams();
+  else el.innerHTML = renderSport(activeTab);
+  attachHandlers();
+}
+
+render();
+updatePermBtn();
+loadPermissions();
+connect();
+})();
+</script>
+</body>
+</html>
