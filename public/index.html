@@ -390,11 +390,18 @@ function setSync(state,text){
   txt.textContent = text;
 }
 
+function isTypingInForm(){
+  var el = document.activeElement;
+  if(!el) return false;
+  return el.tagName === "INPUT" || el.tagName === "TEXTAREA";
+}
+
 function applyState(d){
   results = d.results || {};
   finals = d.finals || {};
   fixtureOverrides = d.fixtures || {};
   rosterOverrides = d.rosters || {};
+  if(isTypingInForm()) return;
   render();
 }
 
