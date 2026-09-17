@@ -235,7 +235,7 @@ var SPORTS = {
       m("Sun, Sep 20","2","Prime Hustlers","Team Nexus","5:00–6:00 PM"),
       m("Sun, Sep 20","2","The OOO Outlaws","Team Nexus","6:00–7:00 PM")
     ],
-    final:{date:"TBD",time:"",note:"Overall Powerplay Final · Group 1 top team vs Group 2 top team · date to be announced"}
+    final:{date:"TBD",time:"",note:"Overall Powerplay Final · Group 1 top team vs Group 2 top team"}
   },
   badminton: {
     label:"Badminton", short:"BDM", hasTie:true,
@@ -278,7 +278,7 @@ var SPORTS = {
       m("Fri, Sep 18","1","Prime Hustlers","Schema Stars",""),
       m("Fri, Sep 18","1","Team Nexus","Schema Stars","")
     ],
-    final:{date:"TBD",time:"",note:"Group 2 winner vs Group 1 winner · date not yet assigned"}
+    final:{date:"TBD",time:"",note:"Group 2 winner vs Group 1 winner"}
   },
   fifa: {
     label:"FIFA (PS5)", short:"FFA", hasTie:false,
@@ -715,6 +715,10 @@ function finalRow(sportKey){
   var effB = f.finalistB || leader2 || "";
   var canDecide = effA && effB;
   var w = f.winner;
+  var finalId = "final-"+sportKey;
+  var fov = fixtureOverrides[finalId] || {};
+  var finalDate = fov.date || sport.final.date;
+  var finalTime = fov.time || sport.final.time;
 
   var teamsHtml, ctrls;
   if(canEdit && w && !unlockedFinals[sportKey]){
@@ -742,10 +746,23 @@ function finalRow(sportKey){
     ctrls = canDecide ? resultStatus(w, effA, effB) : '';
   }
 
-  return '<div class="fixture final card">' +
-    '<div class="fx-meta"><span class="final-badge">Final</span><span class="fx-date">'+esc(sport.final.date)+(sport.final.time?" · "+esc(sport.final.time):"")+'</span></div>' +
+  var editBtn = canEdit ? '<button data-details="'+finalId+'" class="details-btn corner" title="Edit final date/time">'+(editingDetails[finalId]?"Close":"Edit")+'</button>' : '';
+  var editForm = (canEdit && editingDetails[finalId]) ? (
+    '<div class="details-form">' +
+      '<label>Date<input type="text" id="fxdate-'+finalId+'" value="'+esc(finalDate)+'"></label>' +
+      '<label>Time<input type="text" id="fxtime-'+finalId+'" value="'+esc(finalTime)+'"></label>' +
+      '<input type="hidden" id="fxextra-'+finalId+'" value="">' +
+      '<input type="hidden" id="fxnote-'+finalId+'" value="">' +
+      '<button type="button" data-save-details="'+finalId+'">Save</button>' +
+    '</div>'
+  ) : '';
+
+  return '<div class="fixture final card">'+editBtn+
+    '<div class="fx-top" style="'+(canEdit?"padding-right:56px":"")+'"><div class="fx-meta"><span class="final-badge">Final</span><span class="fx-date">'+esc(finalDate)+(finalTime?" · "+esc(finalTime):"")+'</span></div>' +
     teamsHtml +
     ctrls +
+    '</div>' +
+    editForm +
   '</div>';
 }
 
