@@ -738,7 +738,7 @@ function finalRow(sportKey){
         '<button data-final="'+sportKey+'" data-w="A" class="'+(w==="A"?"sel-win":"")+'">'+esc(shortName(effA))+' won</button>' +
         '<button data-final="'+sportKey+'" data-w="B" class="'+(w==="B"?"sel-win":"")+'">'+esc(shortName(effB))+' won</button>' +
       '</div>'
-    ) : '<span class="fx-date">awaiting group results</span>';
+    ) : '<span class="fx-date" style="flex-basis:100%;margin-top:6px">awaiting group results</span>';
   } else {
     teamsHtml = effA && effB
       ? '<span class="fx-teams"><span>'+esc(effA)+'</span><span class="vs">vs</span><span>'+esc(effB)+'</span></span>'
