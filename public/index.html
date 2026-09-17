@@ -108,7 +108,15 @@ nav button.active{background:var(--ink);color:var(--bg)}
 .g-tag.g1{background:var(--group1-soft);color:var(--group1)}
 .g-tag.g2{background:var(--group2-soft);color:var(--group2)}
 .fixtures{margin-top:22px;display:flex;flex-direction:column;gap:10px}
-.fixture{padding:13px 14px;display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between}
+.fixture{padding:13px 14px}
+.fx-top{display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between}
+.fx-note{margin-top:8px;font-size:13px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace}
+.details-btn{font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:12px;border:1px solid var(--line);background:none;color:var(--ink-faint);padding:6px 10px;border-radius:6px;cursor:pointer}
+.details-btn:hover{border-color:var(--ink-faint);color:var(--ink-soft)}
+.details-form{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;align-items:end}
+.details-form label{display:flex;flex-direction:column;gap:4px;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint)}
+.details-form input,.details-form textarea{font:inherit;font-family:'IBM Plex Sans',sans-serif;font-size:13px;padding:7px 9px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);text-transform:none;letter-spacing:normal;resize:vertical}
+.details-form button{grid-column:1/-1;justify-self:start;font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:12.5px;border:1px solid var(--brand);background:var(--brand);color:#fff;padding:7px 14px;border-radius:6px;cursor:pointer}
 .fixture.final{border:1.5px solid var(--accent)}
 .fx-meta{display:flex;flex-direction:column;gap:2px;min-width:120px}
 .fx-date{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-faint)}
@@ -280,11 +288,15 @@ SPORT_ORDER.forEach(function(k){
 // ---------- state ----------
 var results = {};      // matchId -> {winner:'A'|'B'|'TIE'}
 var finals = {};        // sportKey -> {finalistA, finalistB, winner}
+var fixtureOverrides = {}; // matchId -> {date,time,extra,note,teamA,teamB}
+var rosterOverrides = {};  // team -> {members:[...]}
 var activeTab = "overview";
 var canEdit = false;
 var pollTimer = null;
 var unlockedMatches = {};  // matchId -> true while re-editing a locked result
 var unlockedFinals = {};   // sportKey -> true while re-editing a locked final
+var editingDetails = {};   // matchId -> true while the schedule/note form is open
+var editingRoster = {};    // team -> true while the roster form is open
 
 function getPin(){
   try{ return localStorage.getItem("powerplay_pin") || ""; }catch(e){ return ""; }
@@ -373,6 +385,8 @@ function setSync(state,text){
 function applyState(d){
   results = d.results || {};
   finals = d.finals || {};
+  fixtureOverrides = d.fixtures || {};
+  rosterOverrides = d.rosters || {};
   render();
 }
 
@@ -412,6 +426,26 @@ function writeFinal(sportKey, patch){
   if("winner" in patch) delete unlockedFinals[sportKey];
   render();
   postJSON("/api/final", {sport:sportKey, patch:patch, pin:getPin()});
+}
+function writeFixture(matchId, patch){
+  if(!canEdit) return;
+  var cur = fixtureOverrides[matchId] || {};
+  var next = Object.assign({}, cur, patch);
+  Object.keys(next).forEach(function(k){ if(!next[k]) delete next[k]; });
+  fixtureOverrides[matchId] = next;
+  delete editingDetails[matchId];
+  render();
+  postJSON("/api/fixture", {id:matchId, patch:patch, pin:getPin()});
+}
+function writeRoster(team, patch){
+  if(!canEdit) return;
+  var cur = rosterOverrides[team] || {};
+  var next = Object.assign({}, cur, patch);
+  Object.keys(next).forEach(function(k){ if(!next[k]) delete next[k]; });
+  rosterOverrides[team] = next;
+  delete editingRoster[team];
+  render();
+  postJSON("/api/roster", {team:team, patch:patch, pin:getPin()});
 }
 
 // ---------- standings ----------
@@ -548,6 +582,11 @@ function fixtureRow(sportKey, mt){
   var sport = SPORTS[sportKey];
   var res = results[mt.id] || {};
   var w = res.winner;
+  var ov = fixtureOverrides[mt.id] || {};
+  var date = ov.date || mt.date;
+  var time = ov.time || mt.time;
+  var extra = ov.extra || mt.extra;
+  var note = ov.note || "";
   var teamsHtml = '<span class="fx-teams"><span>'+esc(mt.teamA)+'</span><span class="vs">vs</span><span>'+esc(mt.teamB)+'</span></span>';
   var ctrls;
   if(canEdit){
@@ -564,7 +603,18 @@ function fixtureRow(sportKey, mt){
   } else {
     ctrls = resultStatus(w, mt.teamA, mt.teamB);
   }
-  return '<div class="fixture card"><div class="fx-meta"><span class="fx-date">'+esc(mt.date)+(mt.time?" · "+esc(mt.time):"")+'</span>'+(mt.extra?'<span class="fx-date">'+esc(mt.extra)+'</span>':'')+'</div>'+teamsHtml+ctrls+'</div>';
+  var noteHtml = note ? '<div class="fx-note">'+esc(note)+'</div>' : '';
+  var editBtn = canEdit ? '<button data-details="'+mt.id+'" class="details-btn" title="Edit schedule / score note">'+(editingDetails[mt.id]?"Close":"Edit")+'</button>' : '';
+  var editForm = (canEdit && editingDetails[mt.id]) ? (
+    '<div class="details-form">' +
+      '<label>Date<input type="text" id="fxdate-'+mt.id+'" value="'+esc(date)+'"></label>' +
+      '<label>Time<input type="text" id="fxtime-'+mt.id+'" value="'+esc(time)+'"></label>' +
+      '<label>Court / notes<input type="text" id="fxextra-'+mt.id+'" value="'+esc(extra)+'"></label>' +
+      '<label>Score detail<input type="text" id="fxnote-'+mt.id+'" value="'+esc(note)+'" placeholder="e.g. 142/6 vs 138/7"></label>' +
+      '<button type="button" data-save-details="'+mt.id+'">Save</button>' +
+    '</div>'
+  ) : '';
+  return '<div class="fixture card"><div class="fx-top"><div class="fx-meta"><span class="fx-date">'+esc(date)+(time?" · "+esc(time):"")+'</span>'+(extra?'<span class="fx-date">'+esc(extra)+'</span>':'')+'</div>'+teamsHtml+ctrls+editBtn+'</div>'+noteHtml+editForm+'</div>';
 }
 
 function shortName(name){
@@ -636,8 +686,17 @@ function renderSport(sportKey){
 
 function renderTeams(){
   var cards = TEAMS.map(function(t){
-    var members = ROSTERS[t].map(function(p){ return '<li>'+esc(p)+'</li>'; }).join("");
-    return '<div class="card team-card"><h3>'+esc(t)+'</h3><ul class="roster">'+members+'</ul></div>';
+    var ov = rosterOverrides[t] || {};
+    var memberList = ov.members || ROSTERS[t];
+    var members = memberList.map(function(p){ return '<li>'+esc(p)+'</li>'; }).join("");
+    var editBtn = canEdit ? '<button data-roster-toggle="'+esc(t)+'" class="details-btn">'+(editingRoster[t]?"Close":"Edit")+'</button>' : '';
+    var editForm = (canEdit && editingRoster[t]) ? (
+      '<div class="details-form" style="grid-template-columns:1fr">' +
+        '<label>One player per line<textarea id="roster-'+esc(t)+'" rows="6">'+esc(memberList.join("\n"))+'</textarea></label>' +
+        '<button type="button" data-roster-save="'+esc(t)+'">Save</button>' +
+      '</div>'
+    ) : '';
+    return '<div class="card team-card"><div class="fx-top"><h3>'+esc(t)+'</h3>'+editBtn+'</div><ul class="roster">'+members+'</ul>'+editForm+'</div>';
   }).join("");
   return '<div class="section-title"><h2>Teams</h2><span class="sub">6 teams &middot; 13–14 members each</span></div><div class="teams-grid">'+cards+'</div>';
 }
@@ -675,6 +734,39 @@ function attachHandlers(){
       var patch = {};
       patch[slot === "A" ? "finalistA" : "finalistB"] = sel.value || null;
       writeFinal(sk, patch);
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("button[data-details]"), function(btn){
+    btn.addEventListener("click", function(){
+      var id = btn.getAttribute("data-details");
+      if(editingDetails[id]) delete editingDetails[id]; else editingDetails[id] = true;
+      render();
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("button[data-save-details]"), function(btn){
+    btn.addEventListener("click", function(){
+      var id = btn.getAttribute("data-save-details");
+      writeFixture(id, {
+        date: document.getElementById("fxdate-"+id).value.trim(),
+        time: document.getElementById("fxtime-"+id).value.trim(),
+        extra: document.getElementById("fxextra-"+id).value.trim(),
+        note: document.getElementById("fxnote-"+id).value.trim()
+      });
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("button[data-roster-toggle]"), function(btn){
+    btn.addEventListener("click", function(){
+      var team = btn.getAttribute("data-roster-toggle");
+      if(editingRoster[team]) delete editingRoster[team]; else editingRoster[team] = true;
+      render();
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("button[data-roster-save]"), function(btn){
+    btn.addEventListener("click", function(){
+      var team = btn.getAttribute("data-roster-save");
+      var raw = document.getElementById("roster-"+team).value;
+      var members = raw.split("\n").map(function(s){ return s.trim(); }).filter(Boolean);
+      writeRoster(team, {members: members});
     });
   });
 }
