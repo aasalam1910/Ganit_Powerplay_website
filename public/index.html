@@ -484,6 +484,34 @@ function writeRoster(team, patch){
   postJSON("/api/roster", {team:team, patch:patch, pin:getPin()});
 }
 
+// ---------- fixture ordering ----------
+var MONTHS = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+function parseFixtureWhen(dateStr, timeStr){
+  if(!dateStr) return null;
+  var dm = dateStr.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\D*(\d{1,2})/);
+  if(!dm || !(dm[1] in MONTHS)) return null;
+  var hour = 0, minute = 0;
+  if(timeStr){
+    var tm = timeStr.match(/(\d{1,2}):(\d{2})/);
+    if(tm){
+      hour = parseInt(tm[1],10) % 12;
+      minute = parseInt(tm[2],10);
+      if(/PM/i.test(timeStr)) hour += 12;
+    }
+  }
+  return new Date(2026, MONTHS[dm[1]], parseInt(dm[2],10), hour, minute).getTime();
+}
+function fixtureWhen(mt){
+  var ov = fixtureOverrides[mt.id] || {};
+  var t = parseFixtureWhen(ov.date || mt.date, ov.time || mt.time);
+  return t === null ? Infinity : t;
+}
+function sortedFixtures(sportKey){
+  return SPORTS[sportKey].matches.slice().sort(function(a,b){
+    return fixtureWhen(a) - fixtureWhen(b);
+  });
+}
+
 // ---------- standings ----------
 function groupTable(sportKey, groupNum){
   var sport = SPORTS[sportKey];
@@ -718,7 +746,7 @@ function finalRow(sportKey){
 
 function renderSport(sportKey){
   var sport = SPORTS[sportKey];
-  var fixtures = sport.matches.map(function(mt){ return fixtureRow(sportKey, mt); }).join("");
+  var fixtures = sortedFixtures(sportKey).map(function(mt){ return fixtureRow(sportKey, mt); }).join("");
   var info = (sport.info||[]).map(function(i){ return '<div class="info-row card">'+esc(i.date)+' — '+esc(i.text)+'</div>'; }).join("");
   return '' +
   '<div class="card sport-intro"><div class="fmt">'+esc(sport.format)+'</div></div>' +
