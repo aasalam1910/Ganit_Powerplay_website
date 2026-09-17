@@ -77,6 +77,9 @@ nav button.active{background:var(--ink);color:var(--bg)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media (max-width:640px){.grid2{grid-template-columns:1fr}}
+.sport-columns{display:grid;grid-template-columns:minmax(280px,1fr) minmax(320px,1.35fr);gap:20px;align-items:start}
+@media (max-width:860px){.sport-columns{grid-template-columns:1fr}}
+.standings-col{display:flex;flex-direction:column;gap:14px}
 .section-title{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
 .section-title h2{font-size:20px}
 .section-title .sub{font-size:12px;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace}
@@ -87,15 +90,8 @@ nav button.active{background:var(--ink);color:var(--bg)}
 .leaderboard td.num,.leaderboard th.num{text-align:right;font-family:'IBM Plex Mono',monospace}
 .rank{font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:18px;color:var(--ink-faint);width:28px;display:inline-block}
 .rank.top{color:var(--accent)}
-.team-name{font-weight:600}
-.pts{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:15px}
-.trophy-row{display:flex;gap:14px;margin-top:16px;flex-wrap:wrap}
-.trophy-card{flex:1;min-width:220px;padding:16px;text-align:center}
-.trophy-card .label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);margin-bottom:6px}
-.trophy-score{font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:40px;display:flex;align-items:center;justify-content:center;gap:14px}
-.trophy-score .g1{color:var(--group1)}
-.trophy-score .g2{color:var(--group2)}
-.trophy-score .vs{font-size:16px;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace}
+.team-name{font-weight:700}
+.pts{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:15px}
 .finals-strip{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 .chip{font-size:12px;padding:6px 10px;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);background:var(--surface)}
 .chip.done{border-color:var(--win);color:var(--win);background:var(--win-soft)}
@@ -103,7 +99,8 @@ nav button.active{background:var(--ink);color:var(--bg)}
 .sport-intro .fmt{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink-soft)}
 .group-table{width:100%;border-collapse:collapse;font-size:14px}
 .group-table th,.group-table td{padding:8px 9px;border-bottom:1px solid var(--line);text-align:center}
-.group-table th{font-size:10.5px;text-transform:uppercase;color:var(--ink-faint);letter-spacing:.05em}
+.group-table th{font-size:10.5px;text-transform:uppercase;color:var(--ink-faint);letter-spacing:.05em;font-weight:700}
+.group-table td{font-weight:600}
 .group-table td:first-child,.group-table th:first-child{text-align:left}
 .group-table tbody tr:first-child td{background:var(--win-soft)}
 .group-head{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);font-weight:700;font-size:13px}
@@ -115,7 +112,7 @@ nav button.active{background:var(--ink);color:var(--bg)}
 .fixture.final{border:1.5px solid var(--accent)}
 .fx-meta{display:flex;flex-direction:column;gap:2px;min-width:120px}
 .fx-date{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-faint)}
-.fx-teams{display:flex;align-items:center;gap:8px;font-weight:600;font-size:15px;flex:1;min-width:200px}
+.fx-teams{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;flex:1;min-width:200px}
 .fx-teams .vs{color:var(--ink-faint);font-weight:500;font-size:12px;font-family:'IBM Plex Mono',monospace}
 .fx-teams select{font:inherit;font-weight:600;padding:5px 7px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
 .controls{display:flex;gap:6px;flex-wrap:wrap}
@@ -520,13 +517,7 @@ function renderOverview(){
   '<thead><tr><th></th><th>Team</th><th class="num">W</th><th class="num">L</th><th class="num">T</th><th class="num">Pts</th></tr></thead>' +
   '<tbody>'+rows+'</tbody></table></div>' +
 
-  '<div class="section-title" style="margin-top:26px"><h2>Overall Sports Day Trophy</h2><span class="sub">most sport-final wins, by group</span></div>' +
-  '<div class="trophy-row">' +
-    '<div class="card trophy-card"><div class="label">Finals decided</div>' +
-      '<div class="trophy-score" style="font-size:28px">'+trophy.decided+' / '+trophy.total+'</div></div>' +
-    '<div class="card trophy-card" style="flex:2"><div class="label">Group 1 vs Group 2</div>' +
-      '<div class="trophy-score"><span class="g1">'+trophy.g1+'</span><span class="vs">FINALS WON</span><span class="g2">'+trophy.g2+'</span></div></div>' +
-  '</div>' +
+  '<div class="section-title" style="margin-top:26px"><h2>Sport Finals</h2><span class="sub">'+trophy.decided+' of '+trophy.total+' decided</span></div>' +
   '<div class="finals-strip">'+finalsStrip+'</div>' +
   (Object.keys(results).length===0 && Object.keys(finals).length===0 ? '<div class="banner" style="margin-top:20px">No scores entered yet. Tables and the leaderboard update instantly for everyone as results come in.</div>' : '');
 }
@@ -630,11 +621,17 @@ function renderSport(sportKey){
   var info = (sport.info||[]).map(function(i){ return '<div class="info-row card">'+esc(i.date)+' — '+esc(i.text)+'</div>'; }).join("");
   return '' +
   '<div class="card sport-intro"><div class="fmt">'+esc(sport.format)+'</div></div>' +
-  '<div class="section-title"><h2>Group Standings</h2><span class="sub">win 2 &middot; loss 0'+(sport.hasTie?" &middot; tie 1 each":"")+'</span></div>' +
-  '<div class="grid2">'+renderGroupTable(sportKey,1)+renderGroupTable(sportKey,2)+'</div>' +
-  '<div class="section-title" style="margin-top:26px"><h2>Fixtures</h2><span class="sub">'+(canEdit?"tap a result to record it":"live results")+'</span></div>' +
-  '<div class="fixtures">'+fixtures+info+finalRow(sportKey)+'</div>' +
-  '<div class="card" style="margin-top:16px;padding:12px 14px;font-size:13px;color:var(--ink-soft)">'+esc(sport.final.note)+'</div>';
+  '<div class="sport-columns">' +
+    '<div>' +
+      '<div class="section-title"><h2>Group Standings</h2><span class="sub">win 2 &middot; loss 0'+(sport.hasTie?" &middot; tie 1 each":"")+'</span></div>' +
+      '<div class="standings-col">'+renderGroupTable(sportKey,1)+renderGroupTable(sportKey,2)+'</div>' +
+    '</div>' +
+    '<div>' +
+      '<div class="section-title"><h2>Fixtures</h2><span class="sub">'+(canEdit?"tap a result to record it":"live results")+'</span></div>' +
+      '<div class="fixtures" style="margin-top:0">'+fixtures+info+finalRow(sportKey)+'</div>' +
+      '<div class="card" style="margin-top:16px;padding:12px 14px;font-size:13px;color:var(--ink-soft)">'+esc(sport.final.note)+'</div>' +
+    '</div>' +
+  '</div>';
 }
 
 function renderTeams(){
