@@ -1,7 +1,7 @@
 "use strict";
 var store = require("../lib/store");
 
-var ALLOWED = { date: true, time: true, extra: true, note: true, teamA: true, teamB: true };
+var ALLOWED = { date: true, time: true, extra: true, note: true, teamA: true, teamB: true, playersA: true, playersB: true };
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {

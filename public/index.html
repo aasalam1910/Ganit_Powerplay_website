@@ -108,10 +108,18 @@ nav button.active{background:var(--ink);color:var(--bg)}
 .g-tag.g1{background:var(--group1-soft);color:var(--group1)}
 .g-tag.g2{background:var(--group2-soft);color:var(--group2)}
 .fixtures{margin-top:22px;display:flex;flex-direction:column;gap:10px}
-.fixture{padding:13px 14px}
+.fixture{padding:13px 14px;position:relative}
 .fx-top{display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between}
 .fx-note{margin-top:8px;font-size:13px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace}
 .details-btn{font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:12px;border:1px solid var(--line);background:none;color:var(--ink-faint);padding:6px 10px;border-radius:6px;cursor:pointer}
+.details-btn.corner{position:absolute;top:10px;right:10px;background:var(--surface)}
+.fx-matchup{display:flex;align-items:flex-start;gap:10px;flex:1;min-width:240px}
+.fx-team-col{display:flex;flex-direction:column;gap:5px;flex:1;min-width:0}
+.fx-team-col .fx-team-name{font-weight:700;font-size:15px}
+.fx-matchup .vs{color:var(--ink-faint);font-weight:500;font-size:12px;font-family:'IBM Plex Mono',monospace;padding-top:3px}
+.fx-players{font-size:11.5px;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace;overflow-wrap:anywhere}
+.fx-players-input{font:inherit;font-family:'IBM Plex Sans',sans-serif;font-size:12px;padding:5px 7px;border-radius:5px;border:1px solid var(--line);background:var(--bg);color:var(--ink);width:100%}
+.fx-players-input::placeholder{color:var(--ink-faint)}
 .details-btn:hover{border-color:var(--ink-faint);color:var(--ink-soft)}
 .details-form{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;align-items:end}
 .details-form label{display:flex;flex-direction:column;gap:4px;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint)}
@@ -427,13 +435,13 @@ function writeFinal(sportKey, patch){
   render();
   postJSON("/api/final", {sport:sportKey, patch:patch, pin:getPin()});
 }
-function writeFixture(matchId, patch){
+function writeFixture(matchId, patch, keepFormOpen){
   if(!canEdit) return;
   var cur = fixtureOverrides[matchId] || {};
   var next = Object.assign({}, cur, patch);
   Object.keys(next).forEach(function(k){ if(!next[k]) delete next[k]; });
   fixtureOverrides[matchId] = next;
-  delete editingDetails[matchId];
+  if(!keepFormOpen) delete editingDetails[matchId];
   render();
   postJSON("/api/fixture", {id:matchId, patch:patch, pin:getPin()});
 }
@@ -587,7 +595,22 @@ function fixtureRow(sportKey, mt){
   var time = ov.time || mt.time;
   var extra = ov.extra || mt.extra;
   var note = ov.note || "";
-  var teamsHtml = '<span class="fx-teams"><span>'+esc(mt.teamA)+'</span><span class="vs">vs</span><span>'+esc(mt.teamB)+'</span></span>';
+  var playersA = ov.playersA || "";
+  var playersB = ov.playersB || "";
+
+  var playersFieldA = canEdit
+    ? '<input type="text" class="fx-players-input" data-players="'+mt.id+'" data-slot="A" value="'+esc(playersA)+'" placeholder="Players who played">'
+    : (playersA ? '<div class="fx-players">'+esc(playersA)+'</div>' : '');
+  var playersFieldB = canEdit
+    ? '<input type="text" class="fx-players-input" data-players="'+mt.id+'" data-slot="B" value="'+esc(playersB)+'" placeholder="Players who played">'
+    : (playersB ? '<div class="fx-players">'+esc(playersB)+'</div>' : '');
+
+  var matchupHtml = '<div class="fx-matchup">' +
+    '<div class="fx-team-col"><span class="fx-team-name">'+esc(mt.teamA)+'</span>'+playersFieldA+'</div>' +
+    '<span class="vs">vs</span>' +
+    '<div class="fx-team-col"><span class="fx-team-name">'+esc(mt.teamB)+'</span>'+playersFieldB+'</div>' +
+  '</div>';
+
   var ctrls;
   if(canEdit){
     if(w && !unlockedMatches[mt.id]){
@@ -604,7 +627,7 @@ function fixtureRow(sportKey, mt){
     ctrls = resultStatus(w, mt.teamA, mt.teamB);
   }
   var noteHtml = note ? '<div class="fx-note">'+esc(note)+'</div>' : '';
-  var editBtn = canEdit ? '<button data-details="'+mt.id+'" class="details-btn" title="Edit schedule / score note">'+(editingDetails[mt.id]?"Close":"Edit")+'</button>' : '';
+  var editBtn = canEdit ? '<button data-details="'+mt.id+'" class="details-btn corner" title="Edit schedule / score note">'+(editingDetails[mt.id]?"Close":"Edit")+'</button>' : '';
   var editForm = (canEdit && editingDetails[mt.id]) ? (
     '<div class="details-form">' +
       '<label>Date<input type="text" id="fxdate-'+mt.id+'" value="'+esc(date)+'"></label>' +
@@ -614,7 +637,7 @@ function fixtureRow(sportKey, mt){
       '<button type="button" data-save-details="'+mt.id+'">Save</button>' +
     '</div>'
   ) : '';
-  return '<div class="fixture card"><div class="fx-top"><div class="fx-meta"><span class="fx-date">'+esc(date)+(time?" · "+esc(time):"")+'</span>'+(extra?'<span class="fx-date">'+esc(extra)+'</span>':'')+'</div>'+teamsHtml+ctrls+editBtn+'</div>'+noteHtml+editForm+'</div>';
+  return '<div class="fixture card">'+editBtn+'<div class="fx-top" style="'+(canEdit?"padding-right:56px":"")+'"><div class="fx-meta"><span class="fx-date">'+esc(date)+(time?" · "+esc(time):"")+'</span>'+(extra?'<span class="fx-date">'+esc(extra)+'</span>':'')+'</div>'+matchupHtml+ctrls+'</div>'+noteHtml+editForm+'</div>';
 }
 
 function shortName(name){
@@ -753,6 +776,17 @@ function attachHandlers(){
         note: document.getElementById("fxnote-"+id).value.trim()
       });
     });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("input[data-players]"), function(inp){
+    var save = function(){
+      var id = inp.getAttribute("data-players"), slot = inp.getAttribute("data-slot");
+      var patch = {};
+      patch[slot === "A" ? "playersA" : "playersB"] = inp.value.trim();
+      writeFixture(id, patch, true);
+    };
+    inp.addEventListener("change", save);
+    inp.addEventListener("blur", save);
+    inp.addEventListener("keydown", function(e){ if(e.key === "Enter") inp.blur(); });
   });
   Array.prototype.forEach.call(document.querySelectorAll("button[data-roster-toggle]"), function(btn){
     btn.addEventListener("click", function(){
