@@ -150,6 +150,8 @@ nav button.active{background:var(--ink);color:var(--bg)}
 .team-card h3{font-size:17px;margin-bottom:8px;display:flex;align-items:center;gap:8px}
 .roster{margin:0;padding:0;list-style:none;font-size:13px;color:var(--ink-soft);line-height:1.65}
 .banner{padding:10px 14px;font-size:13px;border-radius:8px;margin-bottom:16px;background:var(--tie-soft);color:var(--tie);border:1px solid var(--tie)}
+.update-banner{margin-top:14px;padding:10px 14px;font-size:13px;border-radius:8px;background:var(--group2-soft);color:var(--group2);border:1px solid var(--group2);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.update-banner button{font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:12.5px;border:1px solid var(--group2);background:var(--group2);color:#fff;padding:6px 12px;border-radius:6px;cursor:pointer}
 .status-badge{font-size:12.5px;font-weight:600;padding:6px 11px;border-radius:6px}
 .status-badge.win{background:var(--win-soft);color:var(--win)}
 .status-badge.tie{background:var(--tie-soft);color:var(--tie)}
@@ -187,6 +189,11 @@ footer{color:var(--ink-faint);font-size:12px;margin-top:36px;line-height:1.7}
       </div>
     </div>
     <nav id="tabNav"></nav>
+  </div>
+
+  <div id="updateBanner" class="update-banner" hidden>
+    A newer version of this page is available.
+    <button type="button" id="updateBannerBtn">Refresh</button>
   </div>
 
   <div id="panels"></div>
@@ -416,7 +423,21 @@ function connect(){
   poll();
   if(pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(poll, 4000);
+  checkVersion();
+  setInterval(checkVersion, 30000);
 }
+
+var myVersion = null;
+function checkVersion(){
+  fetch("/api/version", {cache:"no-store"}).then(function(r){ return r.json(); }).then(function(d){
+    if(!d.id) return;
+    if(myVersion === null){ myVersion = d.id; return; }
+    if(d.id !== myVersion){ document.getElementById("updateBanner").hidden = false; }
+  }).catch(function(){});
+}
+document.getElementById("updateBannerBtn").addEventListener("click", function(){
+  location.reload();
+});
 
 function postJSON(url, body){
   return fetch(url, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)})
