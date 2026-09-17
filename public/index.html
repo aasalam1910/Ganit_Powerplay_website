@@ -199,7 +199,7 @@ footer{color:var(--ink-faint);font-size:12px;margin-top:36px;line-height:1.7}
   <div id="panels"></div>
 
   <footer>
-    W &ndash; Wins &middot; L &ndash; Losses &middot; D &ndash; Draw &middot; P &ndash; Matches Played<br>
+    MP &ndash; Matches Played &middot; W &ndash; Wins &middot; D &ndash; Draw &middot; L &ndash; Losses<br>
     Win = 2 pts &middot; Loss = 0 pts &middot; Draw = 1 pt each (Cricket &amp; Badminton only). Scores sync live for everyone with this link; only the PIN holder can enter results.
   </footer>
 </div>
@@ -603,7 +603,7 @@ function renderOverview(){
   var rows = scores.map(function(s,i){
     return '<tr><td><span class="rank'+(i===0&&s.pts>0?" top":"")+'">'+(i+1)+'</span></td>'+
       '<td class="team-name">'+esc(s.team)+'</td>'+
-      '<td class="num mono">'+s.p+'</td><td class="num mono">'+s.w+'</td><td class="num mono">'+s.l+'</td><td class="num mono">'+s.tie+'</td>'+
+      '<td class="num mono">'+s.p+'</td><td class="num mono">'+s.w+'</td><td class="num mono">'+s.tie+'</td><td class="num mono">'+s.l+'</td>'+
       '<td class="num pts">'+s.pts+'</td></tr>';
   }).join("");
 
@@ -617,7 +617,7 @@ function renderOverview(){
   return '' +
   '<div class="section-title"><h2>Overall Leaderboard</h2><span class="sub">points across all 5 sports</span></div>' +
   '<div class="card"><table class="leaderboard">' +
-  '<thead><tr><th></th><th>Team</th><th class="num">P</th><th class="num">W</th><th class="num">L</th><th class="num">D</th><th class="num">Pts</th></tr></thead>' +
+  '<thead><tr><th></th><th>Team</th><th class="num">MP</th><th class="num">W</th><th class="num">D</th><th class="num">L</th><th class="num">Pts</th></tr></thead>' +
   '<tbody>'+rows+'</tbody></table></div>' +
 
   '<div class="section-title" style="margin-top:26px"><h2>Sport Finals</h2><span class="sub">'+trophy.decided+' of '+trophy.total+' decided</span></div>' +
@@ -628,10 +628,10 @@ function renderOverview(){
 function renderGroupTable(sportKey, groupNum){
   var sport = SPORTS[sportKey];
   var table = groupTable(sportKey, groupNum);
-  var cols = sport.hasTie ? ["P","W","L","D","Pts"] : ["P","W","L","Pts"];
+  var cols = sport.hasTie ? ["MP","W","D","L","Pts"] : ["MP","W","L","Pts"];
   var head = '<tr><th>Team</th>'+cols.map(function(c){return '<th>'+c+'</th>';}).join("")+'</tr>';
   var body = table.map(function(r){
-    var cells = sport.hasTie ? [r.p,r.w,r.l,r.tie,r.pts] : [r.p,r.w,r.l,r.pts];
+    var cells = sport.hasTie ? [r.p,r.w,r.tie,r.l,r.pts] : [r.p,r.w,r.l,r.pts];
     return '<tr><td class="team-name">'+esc(r.team)+'</td>'+cells.map(function(c,i){return '<td class="mono'+(i===cells.length-1?" pts":"")+'">'+c+'</td>';}).join("")+'</tr>';
   }).join("");
   return '<div class="card">' +
