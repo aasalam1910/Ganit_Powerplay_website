@@ -199,7 +199,7 @@ footer{color:var(--ink-faint);font-size:12px;margin-top:36px;line-height:1.7}
   <div id="panels"></div>
 
   <footer>
-    MP &ndash; Matches Played &middot; W &ndash; Wins &middot; D &ndash; Draw &middot; L &ndash; Losses<br>
+    MP &ndash; Group Matches Played &middot; FP &ndash; Finals Played &middot; W &ndash; Wins &middot; D &ndash; Draw &middot; L &ndash; Losses<br>
     Win = 2 pts &middot; Loss = 0 pts &middot; Draw = 1 pt each (Cricket &amp; Badminton only). Scores sync live for everyone with this link; only the PIN holder can enter results.
   </footer>
 </div>
@@ -562,7 +562,7 @@ function effectiveFinal(sportKey){
 
 function overallScores(){
   var totals = {};
-  TEAMS.forEach(function(t){ totals[t] = {team:t,pts:0,w:0,l:0,tie:0}; });
+  TEAMS.forEach(function(t){ totals[t] = {team:t,pts:0,w:0,l:0,tie:0,fp:0}; });
   SPORT_ORDER.forEach(function(sk){
     var sport = SPORTS[sk];
     sport.matches.forEach(function(mt){
@@ -574,13 +574,13 @@ function overallScores(){
     });
     var ef = effectiveFinal(sk);
     if(ef.decided){
-      if(totals[ef.winTeam]){ totals[ef.winTeam].w++; totals[ef.winTeam].pts+=2; }
-      if(totals[ef.loseTeam]){ totals[ef.loseTeam].l++; }
+      if(totals[ef.winTeam]){ totals[ef.winTeam].w++; totals[ef.winTeam].pts+=2; totals[ef.winTeam].fp++; }
+      if(totals[ef.loseTeam]){ totals[ef.loseTeam].l++; totals[ef.loseTeam].fp++; }
     }
   });
   return TEAMS.map(function(t){
     var s = totals[t];
-    s.p = s.w + s.l + s.tie;
+    s.p = s.w + s.l + s.tie - s.fp; // MP = group matches only; finals shown separately as FP
     return s;
   }).sort(function(a,b){ return b.pts - a.pts; });
 }
@@ -619,7 +619,7 @@ function renderOverview(){
   var rows = scores.map(function(s,i){
     return '<tr><td><span class="rank'+(i===0&&s.pts>0?" top":"")+'">'+(i+1)+'</span></td>'+
       '<td class="team-name">'+esc(s.team)+'</td>'+
-      '<td class="num mono">'+s.p+'</td><td class="num mono">'+s.w+'</td><td class="num mono">'+s.tie+'</td><td class="num mono">'+s.l+'</td>'+
+      '<td class="num mono">'+s.p+'</td><td class="num mono">'+s.fp+'</td><td class="num mono">'+s.w+'</td><td class="num mono">'+s.tie+'</td><td class="num mono">'+s.l+'</td>'+
       '<td class="num pts">'+s.pts+'</td></tr>';
   }).join("");
 
@@ -633,7 +633,7 @@ function renderOverview(){
   return '' +
   '<div class="section-title"><h2>Overall Leaderboard</h2><span class="sub">points across all 5 sports</span></div>' +
   '<div class="card"><table class="leaderboard">' +
-  '<thead><tr><th></th><th>Team</th><th class="num">MP</th><th class="num">W</th><th class="num">D</th><th class="num">L</th><th class="num">Pts</th></tr></thead>' +
+  '<thead><tr><th></th><th>Team</th><th class="num" title="Group matches played">MP</th><th class="num" title="Finals played">FP</th><th class="num">W</th><th class="num">D</th><th class="num">L</th><th class="num">Pts</th></tr></thead>' +
   '<tbody>'+rows+'</tbody></table></div>' +
 
   '<div class="section-title" style="margin-top:26px"><h2>Sport Finals</h2><span class="sub">'+trophy.decided+' of '+trophy.total+' decided</span></div>' +
