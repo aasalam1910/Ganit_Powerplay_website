@@ -9,7 +9,7 @@ Live fixtures, score entry, group standings and the overall leaderboard for Gani
 
 - Static frontend in `public/index.html`, no build step.
 - Serverless API routes in `api/` (Vercel Node functions) for reading/writing shared state.
-- State is stored as a single JSON file in Vercel Blob storage (`lib/store.js`).
+- State is stored as a single JSON row in a Supabase table `powerplay_state` (`lib/store.js`).
 
 ## Local development
 
@@ -24,4 +24,4 @@ npx vercel dev
 npx vercel --prod
 ```
 
-Requires a `POWERPLAY_PIN` environment variable set on the Vercel project, and a Blob store connected (`BLOB_READ_WRITE_TOKEN` is added automatically once a store is connected).
+Requires `POWERPLAY_PIN`, `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` environment variables set on the Vercel project.

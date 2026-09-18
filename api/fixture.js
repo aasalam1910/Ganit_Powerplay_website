@@ -17,17 +17,22 @@ module.exports = async function handler(req, res) {
     res.status(400).json({ error: "bad_request" });
     return;
   }
-  var state = await store.loadState();
-  var cur = state.fixtures[body.id] || {};
-  var next = Object.assign({}, cur);
-  var patch = body.patch || {};
-  Object.keys(patch).forEach(function (k) {
-    if (!ALLOWED[k]) return;
-    if (patch[k] === null || patch[k] === undefined || patch[k] === "") delete next[k];
-    else next[k] = String(patch[k]);
-  });
-  if (Object.keys(next).length === 0) delete state.fixtures[body.id];
-  else state.fixtures[body.id] = next;
-  await store.saveState(state);
+  try {
+    var state = await store.loadState({ fresh: true });
+    var cur = state.fixtures[body.id] || {};
+    var next = Object.assign({}, cur);
+    var patch = body.patch || {};
+    Object.keys(patch).forEach(function (k) {
+      if (!ALLOWED[k]) return;
+      if (patch[k] === null || patch[k] === undefined || patch[k] === "") delete next[k];
+      else next[k] = String(patch[k]);
+    });
+    if (Object.keys(next).length === 0) delete state.fixtures[body.id];
+    else state.fixtures[body.id] = next;
+    await store.saveState(state);
+  } catch (e) {
+    res.status(503).json({ error: "storage_unavailable", detail: String((e && e.message) || e) });
+    return;
+  }
   res.status(200).json({ ok: true });
 };

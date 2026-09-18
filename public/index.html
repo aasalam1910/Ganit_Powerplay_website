@@ -414,16 +414,23 @@ function applyState(d){
 }
 
 function poll(){
-  fetch("/api/state", {cache:"no-store"}).then(function(r){ return r.json(); }).then(function(d){
+  fetch("/api/state", {cache:"no-store"}).then(function(r){
+    if(!r.ok){ return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP "+r.status)); }); }
+    return r.json();
+  }).then(function(d){
     applyState(d);
     setSync("live","synced live");
-  }).catch(function(){ setSync("err","reconnecting…"); });
+  }).catch(function(e){
+    // Keep whatever is on screen; never replace it with an empty state.
+    var msg = (e && e.message === "storage_unavailable") ? "storage unavailable — showing last known results" : "reconnecting…";
+    setSync("err", msg);
+  });
 }
 
 function connect(){
   poll();
   if(pollTimer) clearInterval(pollTimer);
-  pollTimer = setInterval(poll, 4000);
+  pollTimer = setInterval(poll, 15000);
   checkVersion();
   setInterval(checkVersion, 30000);
 }
@@ -444,6 +451,8 @@ function postJSON(url, body){
   return fetch(url, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)})
     .then(function(r){
       if(r.status === 403){ canEdit = false; setPin(""); updatePermBtn(); setSync("err","PIN no longer valid — re-enter it"); render(); }
+      else if(!r.ok){ setSync("err", r.status === 503 ? "save failed — storage unavailable" : "save failed — retry"); }
+      else { setSync("live","saved"); }
       return r;
     })
     .catch(function(){ setSync("err","save failed — retry"); });

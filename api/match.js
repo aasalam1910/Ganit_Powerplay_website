@@ -15,12 +15,17 @@ module.exports = async function handler(req, res) {
     res.status(400).json({ error: "bad_request" });
     return;
   }
-  var state = await store.loadState();
-  if (body.winner === null || body.winner === undefined) {
-    delete state.results[body.id];
-  } else {
-    state.results[body.id] = { winner: body.winner };
+  try {
+    var state = await store.loadState({ fresh: true });
+    if (body.winner === null || body.winner === undefined) {
+      delete state.results[body.id];
+    } else {
+      state.results[body.id] = { winner: body.winner };
+    }
+    await store.saveState(state);
+  } catch (e) {
+    res.status(503).json({ error: "storage_unavailable", detail: String((e && e.message) || e) });
+    return;
   }
-  await store.saveState(state);
   res.status(200).json({ ok: true });
 };
