@@ -551,6 +551,15 @@ function groupLeader(sportKey, groupNum){
   return table[0].team;
 }
 
+// Finalists for a sport: the admin's explicit pick, else the auto-derived group leaders.
+function effectiveFinal(sportKey){
+  var f = finals[sportKey] || {};
+  var a = f.finalistA || groupLeader(sportKey, 1) || "";
+  var b = f.finalistB || groupLeader(sportKey, 2) || "";
+  var decided = !!(a && b && f.winner);
+  return {a:a, b:b, winner:f.winner, decided:decided, winTeam: decided ? (f.winner==="A"?a:b) : "", loseTeam: decided ? (f.winner==="A"?b:a) : ""};
+}
+
 function overallScores(){
   var totals = {};
   TEAMS.forEach(function(t){ totals[t] = {team:t,pts:0,w:0,l:0,tie:0}; });
@@ -563,12 +572,10 @@ function overallScores(){
       else if(res.winner === "B"){ totals[mt.teamB].w++; totals[mt.teamB].pts+=2; totals[mt.teamA].l++; }
       else if(res.winner === "TIE"){ totals[mt.teamA].tie++; totals[mt.teamB].tie++; totals[mt.teamA].pts+=1; totals[mt.teamB].pts+=1; }
     });
-    var f = finals[sk];
-    if(f && f.finalistA && f.finalistB && f.winner){
-      var winTeam = f.winner === "A" ? f.finalistA : f.finalistB;
-      var loseTeam = f.winner === "A" ? f.finalistB : f.finalistA;
-      if(totals[winTeam]){ totals[winTeam].w++; totals[winTeam].pts+=2; }
-      if(totals[loseTeam]){ totals[loseTeam].l++; }
+    var ef = effectiveFinal(sk);
+    if(ef.decided){
+      if(totals[ef.winTeam]){ totals[ef.winTeam].w++; totals[ef.winTeam].pts+=2; }
+      if(totals[ef.loseTeam]){ totals[ef.loseTeam].l++; }
     }
   });
   return TEAMS.map(function(t){
@@ -581,10 +588,10 @@ function overallScores(){
 function trophyTally(){
   var g1 = 0, g2 = 0, decided = 0;
   SPORT_ORDER.forEach(function(sk){
-    var f = finals[sk];
-    if(!f || !f.finalistA || !f.finalistB || !f.winner) return;
+    var ef = effectiveFinal(sk);
+    if(!ef.decided) return;
     var sport = SPORTS[sk];
-    var winTeam = f.winner === "A" ? f.finalistA : f.finalistB;
+    var winTeam = ef.winTeam;
     decided++;
     if(sport.groups[1].indexOf(winTeam) !== -1) g1++;
     else if(sport.groups[2].indexOf(winTeam) !== -1) g2++;
@@ -617,9 +624,9 @@ function renderOverview(){
   }).join("");
 
   var finalsStrip = SPORT_ORDER.map(function(sk){
-    var f = finals[sk];
-    var done = f && f.winner && f.finalistA && f.finalistB;
-    var txt = SPORTS[sk].label + (done ? ": " + (f.winner==="A"?f.finalistA:f.finalistB) : "");
+    var ef = effectiveFinal(sk);
+    var done = ef.decided;
+    var txt = SPORTS[sk].label + (done ? ": " + ef.winTeam : "");
     return '<span class="chip'+(done?" done":"")+'">'+esc(txt)+'</span>';
   }).join("");
 
