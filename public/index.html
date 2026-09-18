@@ -100,6 +100,9 @@ nav button.active{background:var(--ink);color:var(--bg)}
 .sport-intro .fmt{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink-soft)}
 .venue{display:inline-flex;align-items:center;gap:7px;font-size:14px;font-weight:600;color:var(--brand);text-decoration:none;padding:6px 12px 6px 9px;border:1px solid var(--line);border-radius:999px;background:var(--bg,transparent);max-width:100%}
 .venue:hover{border-color:var(--brand);text-decoration:underline}
+.venue.plain{color:var(--ink-soft);cursor:default}
+.venue.plain:hover{border-color:var(--line);text-decoration:none}
+.venue.plain svg{color:var(--ink-faint)}
 .venue svg{width:16px;height:16px;flex:none;color:var(--accent)}
 .venue span{white-space:normal}
 .group-table{width:100%;border-collapse:collapse;font-size:14px}
@@ -263,7 +266,7 @@ var SPORTS = {
   chess: {
     label:"Chess", short:"CHS", hasTie:false,
     format:"1 vs 1 · 15 min/game · 5:00–6:00 PM",
-    venue:"Ganit Business Solutions Pvt Ltd, Perungudi, Chennai",
+    venue:"Chennai office", venueMap:false,
     groups:{1:["Prime Hustlers","Team Nexus","Barely Athletic"],2:["The OOO Outlaws","Schema Stars","Super Strikers"]},
     matches:[
       m("Mon, Sep 21","2","The OOO Outlaws","Schema Stars",""),
@@ -279,7 +282,7 @@ var SPORTS = {
   carrom: {
     label:"Carrom", short:"CRM", hasTie:false,
     format:"2 vs 2 doubles · 20 min/match · 5:00–6:00 PM",
-    venue:"Ganit Business Solutions Pvt Ltd, Perungudi, Chennai",
+    venue:"Chennai office", venueMap:false,
     groups:{1:["Prime Hustlers","Team Nexus","Schema Stars"],2:["The OOO Outlaws","Barely Athletic","Super Strikers"]},
     matches:[
       m("Wed, Sep 16","2","The OOO Outlaws","Barely Athletic",""),
@@ -795,8 +798,9 @@ function finalRow(sportKey){
 }
 
 var PIN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-6.6 7-12a7 7 0 1 0-14 0c0 5.4 7 12 7 12z"/><circle cx="12" cy="10" r="2.6"/></svg>';
-function venueLink(venue){
+function venueLink(venue, mapLink){
   if(!venue) return "";
+  if(mapLink === false) return '<span class="venue plain">'+PIN_SVG+'<span>'+esc(venue)+'</span></span>';
   var url = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(venue);
   return '<a class="venue" href="'+url+'" target="_blank" rel="noopener" title="Open in Google Maps">'+PIN_SVG+'<span>'+esc(venue)+'</span></a>';
 }
@@ -806,7 +810,7 @@ function renderSport(sportKey){
   var fixtures = sortedFixtures(sportKey).map(function(mt){ return fixtureRow(sportKey, mt); }).join("");
   var info = (sport.info||[]).map(function(i){ return '<div class="info-row card">'+esc(i.date)+' — '+esc(i.text)+'</div>'; }).join("");
   return '' +
-  '<div class="card sport-intro"><div class="fmt">'+esc(sport.format)+'</div>'+venueLink(sport.venue)+'</div>' +
+  '<div class="card sport-intro"><div class="fmt">'+esc(sport.format)+'</div>'+venueLink(sport.venue, sport.venueMap)+'</div>' +
   '<div class="sport-columns">' +
     '<div>' +
       '<div class="section-title"><h2>Group Standings</h2><span class="sub">win 2 &middot; loss 0'+(sport.hasTie?" &middot; tie 1 each":"")+'</span></div>' +
