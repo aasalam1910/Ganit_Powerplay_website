@@ -644,7 +644,7 @@ function renderOverview(){
   var trophy = trophyTally();
   var rows = scores.map(function(s,i){
     return '<tr><td><span class="rank'+(i===0&&s.pts>0?" top":"")+'">'+(i+1)+'</span></td>'+
-      '<td class="team-name"><span class="won-wrap">'+esc(s.team)+winnerBadges(s.team)+'</span></td>'+
+      '<td class="team-name">'+esc(s.team)+'</td>'+
       '<td class="num mono">'+s.p+'</td><td class="num mono">'+s.fp+'</td><td class="num mono">'+s.fw+'</td><td class="num mono">'+s.w+'</td><td class="num mono">'+s.tie+'</td><td class="num mono">'+s.l+'</td>'+
       '<td class="num pts">'+s.pts+'</td></tr>';
   }).join("");
