@@ -95,6 +95,10 @@ nav button.active{background:var(--ink);color:var(--bg)}
 .finals-strip{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 .chip{font-size:12px;padding:6px 10px;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);background:var(--surface)}
 .chip.done{border-color:var(--win);color:var(--win);background:var(--win-soft)}
+.won{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--accent-ink);background:var(--accent);padding:2px 8px;border-radius:999px;margin-left:8px;vertical-align:middle;white-space:nowrap}
+.won-wrap{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 0}
+.team-card h3 .won{margin-left:0}
+.team-card h3{flex-wrap:wrap}
 .sport-intro{padding:16px 18px;margin-bottom:16px}
 .sport-intro{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 18px}
 .sport-intro .fmt{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink-soft)}
@@ -601,6 +605,14 @@ function overallScores(){
   }).sort(function(a,b){ return b.pts - a.pts; });
 }
 
+function sportsWonBy(team){
+  return SPORT_ORDER.filter(function(sk){ var ef = effectiveFinal(sk); return ef.decided && ef.winTeam === team; })
+    .map(function(sk){ return SPORTS[sk].label; });
+}
+function winnerBadges(team){
+  return sportsWonBy(team).map(function(label){ return '<span class="won" title="'+esc(label)+' winner">&#127942; '+esc(label)+' winner</span>'; }).join("");
+}
+
 function trophyTally(){
   var g1 = 0, g2 = 0, decided = 0;
   SPORT_ORDER.forEach(function(sk){
@@ -634,7 +646,7 @@ function renderOverview(){
   var trophy = trophyTally();
   var rows = scores.map(function(s,i){
     return '<tr><td><span class="rank'+(i===0&&s.pts>0?" top":"")+'">'+(i+1)+'</span></td>'+
-      '<td class="team-name">'+esc(s.team)+'</td>'+
+      '<td class="team-name"><span class="won-wrap">'+esc(s.team)+winnerBadges(s.team)+'</span></td>'+
       '<td class="num mono">'+s.p+'</td><td class="num mono">'+s.fp+'</td><td class="num mono">'+s.fw+'</td><td class="num mono">'+s.w+'</td><td class="num mono">'+s.tie+'</td><td class="num mono">'+s.l+'</td>'+
       '<td class="num pts">'+s.pts+'</td></tr>';
   }).join("");
@@ -837,7 +849,7 @@ function renderTeams(){
         '<button type="button" data-roster-save="'+esc(t)+'">Save</button>' +
       '</div>'
     ) : '';
-    return '<div class="card team-card"><div class="fx-top"><h3>'+esc(t)+'</h3>'+editBtn+'</div><ul class="roster">'+members+'</ul>'+editForm+'</div>';
+    return '<div class="card team-card"><div class="fx-top"><h3>'+esc(t)+winnerBadges(t)+'</h3>'+editBtn+'</div><ul class="roster">'+members+'</ul>'+editForm+'</div>';
   }).join("");
   return '<div class="section-title"><h2>Teams</h2><span class="sub">6 teams &middot; 13–14 members each</span></div><div class="teams-grid">'+cards+'</div>';
 }
