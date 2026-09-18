@@ -85,7 +85,7 @@ nav button.active{background:var(--ink);color:var(--bg)}
 .section-title .sub{font-size:12px;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace}
 .leaderboard{width:100%;border-collapse:collapse}
 .leaderboard th,.leaderboard td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line)}
-.leaderboard th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600}
+.leaderboard th{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);font-weight:700}
 .leaderboard tr:last-child td{border-bottom:none}
 .leaderboard td.num,.leaderboard th.num{text-align:right;font-family:'IBM Plex Mono',monospace}
 .rank{font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:18px;color:var(--ink-faint);width:28px;display:inline-block}
@@ -99,7 +99,7 @@ nav button.active{background:var(--ink);color:var(--bg)}
 .sport-intro .fmt{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink-soft)}
 .group-table{width:100%;border-collapse:collapse;font-size:14px}
 .group-table th,.group-table td{padding:8px 9px;border-bottom:1px solid var(--line);text-align:center}
-.group-table th{font-size:10.5px;text-transform:uppercase;color:var(--ink-faint);letter-spacing:.05em;font-weight:700}
+.group-table th{font-size:12px;text-transform:uppercase;color:var(--ink-soft);letter-spacing:.05em;font-weight:700}
 .group-table td{font-weight:600}
 .group-table td:first-child,.group-table th:first-child{text-align:left}
 .group-table tbody tr:first-child td{background:var(--win-soft)}
@@ -165,7 +165,9 @@ nav button.active{background:var(--ink);color:var(--bg)}
 .pin-row input{flex:1;min-width:0;font:inherit;font-family:'IBM Plex Mono',monospace;letter-spacing:.2em;padding:7px 9px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
 .pin-row button{font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:12.5px;border:1px solid var(--brand);background:var(--brand);color:#fff;padding:7px 11px;border-radius:6px;cursor:pointer}
 .pin-error{font-size:12px;color:var(--loss)}
-footer{color:var(--ink-faint);font-size:12px;margin-top:36px;line-height:1.7}
+footer{color:var(--ink-soft);font-size:14px;margin-top:36px;line-height:1.8}
+footer .legend{font-size:15px;color:var(--ink);margin-bottom:6px}
+footer .legend b{font-weight:700;font-family:'IBM Plex Mono',monospace;letter-spacing:.02em}
 </style>
 </head>
 <body>
@@ -199,7 +201,7 @@ footer{color:var(--ink-faint);font-size:12px;margin-top:36px;line-height:1.7}
   <div id="panels"></div>
 
   <footer>
-    MP &ndash; Group Matches Played &middot; FP &ndash; Finals Played &middot; FW &ndash; Finals Won &middot; W &ndash; Wins &middot; D &ndash; Draw &middot; L &ndash; Losses<br>
+    <div class="legend"><b>MP</b> Group Matches Played &middot; <b>FP</b> Finals Played &middot; <b>FW</b> Finals Won &middot; <b>W</b> Wins &middot; <b>D</b> Draw &middot; <b>L</b> Losses &middot; <b>Pts</b> Points</div>
     Win = 2 pts &middot; Loss = 0 pts &middot; Draw = 1 pt each (Cricket &amp; Badminton only). Scores sync live for everyone with this link; only the PIN holder can enter results.
   </footer>
 </div>
