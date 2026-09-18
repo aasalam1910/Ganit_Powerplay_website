@@ -672,11 +672,13 @@ function renderOverview(){
 function renderGroupTable(sportKey, groupNum){
   var sport = SPORTS[sportKey];
   var table = groupTable(sportKey, groupNum);
+  var ef = effectiveFinal(sportKey);
   var cols = sport.hasTie ? ["MP","W","D","L","Pts"] : ["MP","W","L","Pts"];
   var head = '<tr><th>Team</th>'+cols.map(function(c){return '<th>'+c+'</th>';}).join("")+'</tr>';
   var body = table.map(function(r){
     var cells = sport.hasTie ? [r.p,r.w,r.tie,r.l,r.pts] : [r.p,r.w,r.l,r.pts];
-    return '<tr><td class="team-name">'+esc(r.team)+'</td>'+cells.map(function(c,i){return '<td class="mono'+(i===cells.length-1?" pts":"")+'">'+c+'</td>';}).join("")+'</tr>';
+    var badge = (ef.decided && ef.winTeam === r.team) ? '<span class="won" title="'+esc(sport.label)+' winner">&#127942; Winner</span>' : "";
+    return '<tr><td class="team-name"><span class="won-wrap">'+esc(r.team)+badge+'</span></td>'+cells.map(function(c,i){return '<td class="mono'+(i===cells.length-1?" pts":"")+'">'+c+'</td>';}).join("")+'</tr>';
   }).join("");
   return '<div class="card">' +
     '<div class="group-head"><span class="g-tag g'+groupNum+'">Group '+groupNum+'</span></div>' +
