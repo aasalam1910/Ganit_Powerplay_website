@@ -236,7 +236,7 @@ function m(date,group,teamA,teamB,time,extra){
 
 var SPORTS = {
   cricket: {
-    label:"Cricket", short:"CKT", hasTie:true,
+    label:"Cricket", short:"CKT", hasTie:true, winPoints:3,
     format:"7 vs 7 · 7 overs/side · 3:00–6:00 PM",
     venue:"Shot Multisport Academy, Neelankarai, Chennai",
     groups:{1:["Barely Athletic","Schema Stars","Super Strikers"],2:["Prime Hustlers","The OOO Outlaws","Team Nexus"]},
@@ -269,13 +269,13 @@ var SPORTS = {
     label:"Chess", short:"CHS", hasTie:false,
     format:"1 vs 1 · 15 min/game · 5:00–6:00 PM",
     venue:"Chennai office", venueMap:false,
-    groups:{1:["Prime Hustlers","Team Nexus","Barely Athletic"],2:["The OOO Outlaws","Schema Stars","Super Strikers"]},
+    groups:{1:["Schema Stars","Team Nexus","Barely Athletic"],2:["The OOO Outlaws","Prime Hustlers","Super Strikers"]},
     matches:[
-      m("Mon, Sep 21","2","The OOO Outlaws","Schema Stars",""),
+      m("Mon, Sep 21","2","The OOO Outlaws","Prime Hustlers",""),
       m("Mon, Sep 21","2","The OOO Outlaws","Super Strikers",""),
-      m("Mon, Sep 21","1","Prime Hustlers","Team Nexus",""),
-      m("Mon, Sep 21","1","Prime Hustlers","Barely Athletic",""),
-      m("Wed, Sep 23","2","Schema Stars","Super Strikers",""),
+      m("Mon, Sep 21","1","Schema Stars","Team Nexus",""),
+      m("Mon, Sep 21","1","Schema Stars","Barely Athletic",""),
+      m("Wed, Sep 23","2","Prime Hustlers","Super Strikers",""),
       m("Wed, Sep 23","1","Team Nexus","Barely Athletic","")
     ],
     info:[{date:"Wed, Sep 23",text:"Online Group — 8 players (pooled into team rosters)"}],
@@ -542,6 +542,7 @@ function sortedFixtures(sportKey){
 // ---------- standings ----------
 function groupTable(sportKey, groupNum){
   var sport = SPORTS[sportKey];
+  var winPts = sport.winPoints || 2;
   var teams = sport.groups[groupNum];
   var t = {};
   teams.forEach(function(tm){ t[tm] = {team:tm,p:0,w:0,l:0,tie:0,pts:0}; });
@@ -551,8 +552,8 @@ function groupTable(sportKey, groupNum){
     if(!res || !res.winner) return;
     var a = t[mt.teamA], b = t[mt.teamB];
     a.p++; b.p++;
-    if(res.winner === "A"){ a.w++; a.pts+=2; b.l++; }
-    else if(res.winner === "B"){ b.w++; b.pts+=2; a.l++; }
+    if(res.winner === "A"){ a.w++; a.pts+=winPts; b.l++; }
+    else if(res.winner === "B"){ b.w++; b.pts+=winPts; a.l++; }
     else if(res.winner === "TIE"){ a.tie++; b.tie++; a.pts+=1; b.pts+=1; }
   });
   return teams.map(function(tm){ return t[tm]; }).sort(function(x,y){ return y.pts - x.pts; });
@@ -582,11 +583,12 @@ function overallScores(){
   TEAMS.forEach(function(t){ totals[t] = {team:t,pts:0,w:0,l:0,tie:0,fp:0,fw:0}; });
   SPORT_ORDER.forEach(function(sk){
     var sport = SPORTS[sk];
+    var winPts = sport.winPoints || 2;
     sport.matches.forEach(function(mt){
       var res = results[mt.id];
       if(!res || !res.winner) return;
-      if(res.winner === "A"){ totals[mt.teamA].w++; totals[mt.teamA].pts+=2; totals[mt.teamB].l++; }
-      else if(res.winner === "B"){ totals[mt.teamB].w++; totals[mt.teamB].pts+=2; totals[mt.teamA].l++; }
+      if(res.winner === "A"){ totals[mt.teamA].w++; totals[mt.teamA].pts+=winPts; totals[mt.teamB].l++; }
+      else if(res.winner === "B"){ totals[mt.teamB].w++; totals[mt.teamB].pts+=winPts; totals[mt.teamA].l++; }
       else if(res.winner === "TIE"){ totals[mt.teamA].tie++; totals[mt.teamB].tie++; totals[mt.teamA].pts+=1; totals[mt.teamB].pts+=1; }
     });
     var ef = effectiveFinal(sk);
