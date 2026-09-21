@@ -211,7 +211,7 @@ footer .legend b{font-weight:700;font-family:'IBM Plex Mono',monospace;letter-sp
   <div id="panels"></div>
 
   <footer>
-    <div class="legend"><b>MP</b> Group Matches Played &middot; <b>W</b> Wins (incl. finals) &middot; <b>D</b> Draw &middot; <b>L</b> Losses (incl. finals) &middot; <b>Pts</b> Points</div>
+    <div class="legend"><b>MP</b> Matches Played (incl. finals) &middot; <b>W</b> Wins (incl. finals) &middot; <b>D</b> Draw &middot; <b>L</b> Losses (incl. finals) &middot; <b>Pts</b> Points</div>
     Win = 2 pts (Cricket = 3 pts) &middot; Loss = 0 pts &middot; Draw = 1 pt each (Cricket &amp; Badminton only). Scores sync live for everyone with this link; only the PIN holder can enter results.
   </footer>
 </div>
@@ -591,13 +591,13 @@ function overallScores(){
       else if(res.winner === "TIE"){ totals[mt.teamA].tie++; totals[mt.teamB].tie++; totals[mt.teamA].pts+=1; totals[mt.teamB].pts+=1; }
     });
   });
-  TEAMS.forEach(function(t){ totals[t].p = totals[t].w + totals[t].l + totals[t].tie; }); // group matches only
+  TEAMS.forEach(function(t){ totals[t].p = totals[t].w + totals[t].l + totals[t].tie; });
   SPORT_ORDER.forEach(function(sk){
     var ef = effectiveFinal(sk);
     if(ef.decided){
-      // Finals: 2 pts for the win, plus the win/loss folds into W/L (MP stays group-only).
-      if(totals[ef.winTeam]){ totals[ef.winTeam].pts+=2; totals[ef.winTeam].w++; }
-      if(totals[ef.loseTeam]){ totals[ef.loseTeam].l++; }
+      // Finals: 2 pts for the win; the win/loss and the match itself fold into W/L/MP.
+      if(totals[ef.winTeam]){ totals[ef.winTeam].pts+=2; totals[ef.winTeam].w++; totals[ef.winTeam].p++; }
+      if(totals[ef.loseTeam]){ totals[ef.loseTeam].l++; totals[ef.loseTeam].p++; }
     }
   });
   return TEAMS.map(function(t){ return totals[t]; }).sort(function(a,b){ return b.pts - a.pts; });
@@ -659,7 +659,7 @@ function renderOverview(){
   return '' +
   '<div class="section-title"><h2>Overall Leaderboard</h2><span class="sub">points across all 5 sports</span></div>' +
   '<div class="card"><table class="leaderboard">' +
-  '<thead><tr><th></th><th>Team</th><th class="num" title="Group matches played">MP</th><th class="num">W</th><th class="num">D</th><th class="num">L</th><th class="num">Pts</th></tr></thead>' +
+  '<thead><tr><th></th><th>Team</th><th class="num" title="Matches played, incl. finals">MP</th><th class="num">W</th><th class="num">D</th><th class="num">L</th><th class="num">Pts</th></tr></thead>' +
   '<tbody>'+rows+'</tbody></table></div>' +
 
   '<div class="section-title" style="margin-top:26px"><h2>Sport Finals</h2><span class="sub">'+trophy.decided+' of '+trophy.total+' decided</span></div>' +
@@ -832,7 +832,6 @@ function renderSport(sportKey){
     '<div>' +
       '<div class="section-title"><h2>Fixtures</h2><span class="sub">'+(canEdit?"tap a result to record it":"live results")+'</span></div>' +
       '<div class="fixtures" style="margin-top:0">'+fixtures+info+finalRow(sportKey)+'</div>' +
-      '<div class="card" style="margin-top:16px;padding:12px 14px;font-size:13px;color:var(--ink-soft)">'+esc(sport.final.note)+'</div>' +
     '</div>' +
   '</div>';
 }
