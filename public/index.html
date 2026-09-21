@@ -831,7 +831,7 @@ function renderSport(sportKey){
     '</div>' +
     '<div>' +
       '<div class="section-title"><h2>Fixtures</h2><span class="sub">'+(canEdit?"tap a result to record it":"live results")+'</span></div>' +
-      '<div class="fixtures" style="margin-top:0">'+fixtures+info+finalRow(sportKey)+'</div>' +
+      '<div class="fixtures" style="margin-top:0">'+fixtures+info+(sportKey==="cricket"?"":finalRow(sportKey))+'</div>' +
     '</div>' +
   '</div>';
 }
