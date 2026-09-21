@@ -248,7 +248,7 @@ var SPORTS = {
       m("Sun, Sep 20","2","Prime Hustlers","Team Nexus","4:00–5:00 PM"),
       m("Sun, Sep 20","2","The OOO Outlaws","Team Nexus","5:00–6:00 PM")
     ],
-    final:{date:"TBD",time:"3:00–3:45 PM",note:"Overall Powerplay Final · Group 1 top team vs Group 2 top team"}
+    final:{date:"Oct 10/11 (TBD)",time:"3:00–3:45 PM",note:"Overall Powerplay Final · Group 1 top team vs Group 2 top team"}
   },
   badminton: {
     label:"Badminton", short:"BDM", hasTie:true,
@@ -827,7 +827,7 @@ function renderSport(sportKey){
   '<div class="card sport-intro"><div class="fmt">'+esc(sport.format)+'</div>'+venueLink(sport.venue, sport.venueMap)+'</div>' +
   '<div class="sport-columns">' +
     '<div>' +
-      '<div class="section-title"><h2>Group Standings</h2><span class="sub">win 2 &middot; loss 0'+(sport.hasTie?" &middot; tie 1 each":"")+'</span></div>' +
+      '<div class="section-title"><h2>Group Standings</h2><span class="sub">win '+(sport.winPoints||2)+' &middot; loss 0'+(sport.hasTie?" &middot; tie 1 each":"")+'</span></div>' +
       '<div class="standings-col">'+renderGroupTable(sportKey,1)+renderGroupTable(sportKey,2)+'</div>' +
     '</div>' +
     '<div>' +
