@@ -254,6 +254,7 @@ var SPORTS = {
     label:"Badminton", short:"BDM", hasTie:true,
     format:"21-pt games · 4 games/tie · 4:00–8:00 PM",
     venue:"GPS Badminton Academy, Thoraipakkam, Chennai",
+    venueUrl:"https://maps.app.goo.gl/jVrshnWaNW9T7ynG6",
     groups:{1:["Barely Athletic","Prime Hustlers","The OOO Outlaws"],2:["Team Nexus","Schema Stars","Super Strikers"]},
     matches:[
       m("Sat, Sep 26","1","Barely Athletic","Prime Hustlers","4:00–5:20 PM","Court 1"),
@@ -811,10 +812,10 @@ function finalRow(sportKey){
 }
 
 var PIN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-6.6 7-12a7 7 0 1 0-14 0c0 5.4 7 12 7 12z"/><circle cx="12" cy="10" r="2.6"/></svg>';
-function venueLink(venue, mapLink){
+function venueLink(venue, mapLink, venueUrl){
   if(!venue) return "";
   if(mapLink === false) return '<span class="venue plain">'+PIN_SVG+'<span>'+esc(venue)+'</span></span>';
-  var url = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(venue);
+  var url = venueUrl || ("https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(venue));
   return '<a class="venue" href="'+url+'" target="_blank" rel="noopener" title="Open in Google Maps">'+PIN_SVG+'<span>'+esc(venue)+'</span></a>';
 }
 
@@ -823,7 +824,7 @@ function renderSport(sportKey){
   var fixtures = sortedFixtures(sportKey).map(function(mt){ return fixtureRow(sportKey, mt); }).join("");
   var info = (sport.info||[]).map(function(i){ return '<div class="info-row card">'+esc(i.date)+' — '+esc(i.text)+'</div>'; }).join("");
   return '' +
-  '<div class="card sport-intro"><div class="fmt">'+esc(sport.format)+'</div>'+venueLink(sport.venue, sport.venueMap)+'</div>' +
+  '<div class="card sport-intro"><div class="fmt">'+esc(sport.format)+'</div>'+venueLink(sport.venue, sport.venueMap, sport.venueUrl)+'</div>' +
   '<div class="sport-columns">' +
     '<div>' +
       '<div class="section-title"><h2>Group Standings</h2><span class="sub">win '+(sport.winPoints||2)+' &middot; loss 0'+(sport.hasTie?" &middot; tie 1 each":"")+'</span></div>' +
