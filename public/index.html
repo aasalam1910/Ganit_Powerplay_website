@@ -578,30 +578,37 @@ function effectiveFinal(sportKey){
   return {a:a, b:b, winner:f.winner, decided:decided, winTeam: decided ? (f.winner==="A"?a:b) : "", loseTeam: decided ? (f.winner==="A"?b:a) : ""};
 }
 
-function overallScores(){
-  var totals = {};
-  TEAMS.forEach(function(t){ totals[t] = {team:t,pts:0,w:0,l:0,tie:0}; });
-  SPORT_ORDER.forEach(function(sk){
-    var sport = SPORTS[sk];
-    var winPts = sport.winPoints || 2;
-    sport.matches.forEach(function(mt){
-      var res = results[mt.id];
-      if(!res || !res.winner) return;
-      if(res.winner === "A"){ totals[mt.teamA].w++; totals[mt.teamA].pts+=winPts; totals[mt.teamB].l++; }
-      else if(res.winner === "B"){ totals[mt.teamB].w++; totals[mt.teamB].pts+=winPts; totals[mt.teamA].l++; }
-      else if(res.winner === "TIE"){ totals[mt.teamA].tie++; totals[mt.teamB].tie++; totals[mt.teamA].pts+=1; totals[mt.teamB].pts+=1; }
+// One team's tally in one sport: its row in that sport's group table, plus the final.
+// This is the same row the sport tab shows, so the overview can never drift from it.
+function sportScore(sportKey, team){
+  var sport = SPORTS[sportKey];
+  var out = {p:0, w:0, l:0, tie:0, pts:0};
+  var groupNum = sport.groups[1].indexOf(team) !== -1 ? 1 : (sport.groups[2].indexOf(team) !== -1 ? 2 : 0);
+  if(groupNum){
+    groupTable(sportKey, groupNum).forEach(function(r){
+      if(r.team !== team) return;
+      out.p = r.p; out.w = r.w; out.l = r.l; out.tie = r.tie; out.pts = r.pts;
     });
-  });
-  TEAMS.forEach(function(t){ totals[t].p = totals[t].w + totals[t].l + totals[t].tie; });
-  SPORT_ORDER.forEach(function(sk){
-    var ef = effectiveFinal(sk);
-    if(ef.decided){
-      // Finals: 2 pts for the win; the win/loss and the match itself fold into W/L/MP.
-      if(totals[ef.winTeam]){ totals[ef.winTeam].pts+=2; totals[ef.winTeam].w++; totals[ef.winTeam].p++; }
-      if(totals[ef.loseTeam]){ totals[ef.loseTeam].l++; totals[ef.loseTeam].p++; }
-    }
-  });
-  return TEAMS.map(function(t){ return totals[t]; }).sort(function(a,b){ return b.pts - a.pts; });
+  }
+  // Finals: the sport's own win points (Cricket = 3); the win/loss and the match itself fold into W/L/MP.
+  var ef = effectiveFinal(sportKey);
+  if(ef.decided){
+    if(ef.winTeam === team){ out.pts += sport.winPoints || 2; out.w++; out.p++; }
+    else if(ef.loseTeam === team){ out.l++; out.p++; }
+  }
+  return out;
+}
+
+// Overall = the straight sum of each team's per-sport tallies across all 5 sports.
+function overallScores(){
+  return TEAMS.map(function(team){
+    var tot = {team:team, p:0, w:0, l:0, tie:0, pts:0};
+    SPORT_ORDER.forEach(function(sk){
+      var s = sportScore(sk, team);
+      tot.p += s.p; tot.w += s.w; tot.l += s.l; tot.tie += s.tie; tot.pts += s.pts;
+    });
+    return tot;
+  }).sort(function(a,b){ return b.pts - a.pts; });
 }
 
 function sportsWonBy(team){
