@@ -130,6 +130,12 @@ nav button.active{background:var(--ink);color:var(--bg)}
 .fx-players{font-size:11.5px;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace;overflow-wrap:anywhere}
 .fx-players-input{font:inherit;font-family:'IBM Plex Sans',sans-serif;font-size:12px;padding:5px 7px;border-radius:5px;border:1px solid var(--line);background:var(--bg);color:var(--ink);width:100%}
 .fx-players-input::placeholder{color:var(--ink-faint)}
+.fx-games{margin-top:11px;padding-top:10px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.fx-games-head{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);font-weight:600}
+.fx-game{display:grid;grid-template-columns:62px minmax(0,1fr) minmax(0,1fr) auto;gap:8px;align-items:center}
+.fx-game-label{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-faint)}
+.fx-game-win button{padding:5px 9px;font-size:11.5px}
+@media (max-width:620px){.fx-game{grid-template-columns:1fr;gap:4px}.fx-game-label{margin-top:5px;font-weight:600;color:var(--ink-soft)}}
 .details-btn:hover{border-color:var(--ink-faint);color:var(--ink-soft)}
 .details-form{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;align-items:end}
 .details-form label{display:flex;flex-direction:column;gap:4px;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint)}
@@ -212,7 +218,7 @@ footer .legend b{font-weight:700;font-family:'IBM Plex Mono',monospace;letter-sp
 
   <footer>
     <div class="legend"><b>MP</b> Matches Played (incl. finals) &middot; <b>W</b> Wins (incl. finals) &middot; <b>D</b> Draw &middot; <b>L</b> Losses (incl. finals) &middot; <b>Pts</b> Points</div>
-    Win = 2 pts (Cricket = 3 pts) &middot; Loss = 0 pts &middot; Draw = 1 pt each (Cricket &amp; Badminton only). Scores sync live for everyone with this link; only the PIN holder can enter results.
+    Win = 2 pts (Cricket = 3 pts) &middot; Badminton = 1 pt per game won, 3 games per tie &middot; Loss = 0 pts &middot; Draw = 1 pt each (Cricket only). Scores sync live for everyone with this link; only the PIN holder can enter results.
   </footer>
 </div>
 
@@ -251,8 +257,8 @@ var SPORTS = {
     final:{date:"Oct 10/11 (TBD)",time:"3:00–3:45 PM",note:"Overall Powerplay Final · Group 1 top team vs Group 2 top team"}
   },
   badminton: {
-    label:"Badminton", short:"BDM", hasTie:true,
-    format:"21-pt games · 4 games/tie · 3:00–7:00 PM",
+    label:"Badminton", short:"BDM", hasTie:false, gamesPerTie:3, pointsPerGame:1,
+    format:"21-pt games · 3 games/tie · 3:00–7:00 PM",
     venue:"GPS Badminton Academy, Thoraipakkam, Chennai",
     venueUrl:"https://maps.app.goo.gl/jVrshnWaNW9T7ynG6",
     groups:{1:["Barely Athletic","Prime Hustlers","The OOO Outlaws"],2:["Team Nexus","Schema Stars","Super Strikers"]},
@@ -475,6 +481,28 @@ function postJSON(url, body){
     .catch(function(){ setSync("err","save failed — retry"); });
 }
 
+// Toggle one game of a per-game tie, then re-derive the tie winner from the games.
+function writeGame(sportKey, matchId, gameNum, slot){
+  if(!canEdit) return;
+  var n = SPORTS[sportKey].gamesPerTie;
+  var games = Object.assign({}, (results[matchId] || {}).games || {});
+  if(games[gameNum] === slot) delete games[gameNum]; else games[gameNum] = slot;
+  var tally = gameTally(games, n);
+  var winner = tieWinner(tally, n);
+  if(!tally.played) delete results[matchId];
+  else results[matchId] = {winner:winner, games:games};
+  delete unlockedMatches[matchId];
+  render();
+  postJSON("/api/match", {id:matchId, winner:winner, games:tally.played ? games : null, pin:getPin()});
+}
+function writeFinalGame(sportKey, gameNum, slot){
+  if(!canEdit) return;
+  var n = SPORTS[sportKey].gamesPerTie;
+  var games = Object.assign({}, (finals[sportKey] || {}).games || {});
+  if(games[gameNum] === slot) delete games[gameNum]; else games[gameNum] = slot;
+  var tally = gameTally(games, n);
+  writeFinal(sportKey, {games: tally.played ? games : null, winner: tieWinner(tally, n)});
+}
 function writeMatch(matchId, winner){
   if(!canEdit) return;
   results[matchId] = {winner:winner};
@@ -539,6 +567,30 @@ function sortedFixtures(sportKey){
   });
 }
 
+// ---------- per-game ties ----------
+// Sports with gamesPerTie score each game, not the tie: Badminton is 3 games,
+// 1 pt per game won. The winners live in results[id].games / finals[sport].games
+// as {"1":"A","2":"B",...}; the tie winner is derived from them.
+function gameTally(games, n){
+  var out = {A:0, B:0, played:0};
+  for(var i = 1; i <= n; i++){
+    var v = games && games[i];
+    if(v === "A"){ out.A++; out.played++; }
+    else if(v === "B"){ out.B++; out.played++; }
+  }
+  return out;
+}
+function tieWinner(tally, n){
+  var need = Math.floor(n / 2) + 1;
+  if(tally.A >= need) return "A";
+  if(tally.B >= need) return "B";
+  return null;
+}
+function matchTally(sportKey, matchId){
+  var n = SPORTS[sportKey].gamesPerTie;
+  return gameTally((results[matchId] || {}).games, n);
+}
+
 // ---------- standings ----------
 function groupTable(sportKey, groupNum){
   var sport = SPORTS[sportKey];
@@ -549,8 +601,19 @@ function groupTable(sportKey, groupNum){
   sport.matches.forEach(function(mt){
     if(mt.group != groupNum) return;
     var res = results[mt.id];
-    if(!res || !res.winner) return;
     var a = t[mt.teamA], b = t[mt.teamB];
+    if(sport.gamesPerTie){
+      // A point per game won, banked as each game goes in. MP/W/L land once
+      // one side has taken the tie.
+      var gt = matchTally(sportKey, mt.id);
+      if(!gt.played) return;
+      var ppg = sport.pointsPerGame || 1;
+      a.pts += gt.A * ppg; b.pts += gt.B * ppg;
+      var tw = tieWinner(gt, sport.gamesPerTie);
+      if(tw){ a.p++; b.p++; if(tw === "A"){ a.w++; b.l++; } else { b.w++; a.l++; } }
+      return;
+    }
+    if(!res || !res.winner) return;
     a.p++; b.p++;
     if(res.winner === "A"){ a.w++; a.pts+=winPts; b.l++; }
     else if(res.winner === "B"){ b.w++; b.pts+=winPts; a.l++; }
@@ -590,10 +653,19 @@ function sportScore(sportKey, team){
       out.p = r.p; out.w = r.w; out.l = r.l; out.tie = r.tie; out.pts = r.pts;
     });
   }
-  // Finals: the sport's own win points (Cricket = 3); the win/loss and the match itself fold into W/L/MP.
+  // Finals: per-game sports score the final by games won too; everyone else gets
+  // the sport's own win points (Cricket = 3). Win/loss and the match fold into W/L/MP.
   var ef = effectiveFinal(sportKey);
   if(ef.decided){
-    if(ef.winTeam === team){ out.pts += sport.winPoints || 2; out.w++; out.p++; }
+    if(sport.gamesPerTie){
+      var ft = gameTally((finals[sportKey] || {}).games, sport.gamesPerTie);
+      var ppg = sport.pointsPerGame || 1;
+      if(ef.a === team) out.pts += ft.A * ppg;
+      else if(ef.b === team) out.pts += ft.B * ppg;
+    } else if(ef.winTeam === team){
+      out.pts += sport.winPoints || 2;
+    }
+    if(ef.winTeam === team){ out.w++; out.p++; }
     else if(ef.loseTeam === team){ out.l++; out.p++; }
   }
   return out;
@@ -692,6 +764,14 @@ function renderGroupTable(sportKey, groupNum){
   '</div>';
 }
 
+function tieStatus(teamA, teamB, tally, n){
+  if(!tally.played) return '<span class="status-pending">Not yet played</span>';
+  var w = tieWinner(tally, n);
+  if(w) return '<span class="status-badge win">'+esc(shortName(w === "A" ? teamA : teamB))+' won '+
+    (w === "A" ? tally.A+'–'+tally.B : tally.B+'–'+tally.A)+'</span>';
+  return '<span class="status-badge tie">'+tally.A+'–'+tally.B+' after '+tally.played+' of '+n+'</span>';
+}
+
 function resultStatus(winner, teamA, teamB){
   if(!winner) return '<span class="status-pending">Not yet played</span>';
   if(winner === "TIE") return '<span class="status-badge tie">Tied</span>';
@@ -724,8 +804,16 @@ function fixtureRow(sportKey, mt){
     '<div class="fx-team-col"><span class="fx-team-name">'+esc(mt.teamB)+'</span>'+playersFieldB+'</div>' +
   '</div>';
 
+  // Per-game rows: who played, and who won that game. One point per game won.
+  var gamesHtml = "";
+  if(sport.gamesPerTie){
+    gamesHtml = gameRows(sportKey, mt.id, mt.teamA, mt.teamB, ov, "game");
+  }
+
   var ctrls;
-  if(canEdit){
+  if(sport.gamesPerTie){
+    ctrls = '<div class="controls">'+tieStatus(mt.teamA, mt.teamB, matchTally(sportKey, mt.id), sport.gamesPerTie)+'</div>';
+  } else if(canEdit){
     if(w && !unlockedMatches[mt.id]){
       ctrls = '<div class="controls">' + resultStatus(w, mt.teamA, mt.teamB) +
         '<button data-edit-match="'+mt.id+'" class="change-btn">Change</button></div>';
@@ -750,7 +838,41 @@ function fixtureRow(sportKey, mt){
       '<button type="button" data-save-details="'+mt.id+'">Save</button>' +
     '</div>'
   ) : '';
-  return '<div class="fixture card">'+editBtn+'<div class="fx-top" style="'+(canEdit?"padding-right:56px":"")+'"><div class="fx-meta"><span class="fx-date">'+esc(date)+(time?" · "+esc(time):"")+'</span>'+(extra?'<span class="fx-date">'+esc(extra)+'</span>':'')+'</div>'+matchupHtml+ctrls+'</div>'+noteHtml+editForm+'</div>';
+  return '<div class="fixture card">'+editBtn+'<div class="fx-top" style="'+(canEdit?"padding-right:56px":"")+'"><div class="fx-meta"><span class="fx-date">'+esc(date)+(time?" · "+esc(time):"")+'</span>'+(extra?'<span class="fx-date">'+esc(extra)+'</span>':'')+'</div>'+matchupHtml+ctrls+'</div>'+gamesHtml+noteHtml+editForm+'</div>';
+}
+
+// The per-game block under a fixture: a row per game with both sides' player
+// names and a winner toggle. `kind` is "game" for a fixture, "finalgame" for the
+// final, which stores its games on finals[sport] instead of results[id].
+function gameRows(sportKey, id, teamA, teamB, ov, kind){
+  var sport = SPORTS[sportKey];
+  var n = sport.gamesPerTie;
+  var games = (kind === "finalgame" ? (finals[sportKey] || {}) : (results[id] || {})).games || {};
+  var rows = [];
+  for(var gi = 1; gi <= n; gi++){
+    var ga = ov["g"+gi+"A"] || "", gb = ov["g"+gi+"B"] || "";
+    var gw = games[gi];
+    var label = '<span class="fx-game-label">Game '+gi+'</span>';
+    if(canEdit){
+      rows.push('<div class="fx-game">'+label+
+        '<input type="text" class="fx-players-input" data-players="'+id+'" data-slot="g'+gi+'A" value="'+esc(ga)+'" placeholder="'+esc(shortName(teamA))+' players">'+
+        '<input type="text" class="fx-players-input" data-players="'+id+'" data-slot="g'+gi+'B" value="'+esc(gb)+'" placeholder="'+esc(shortName(teamB))+' players">'+
+        '<div class="controls fx-game-win">'+
+          '<button data-'+kind+'="'+sportKey+'" data-id="'+id+'" data-gn="'+gi+'" data-w="A" class="'+(gw==="A"?"sel-win":"")+'">'+esc(shortName(teamA))+'</button>'+
+          '<button data-'+kind+'="'+sportKey+'" data-id="'+id+'" data-gn="'+gi+'" data-w="B" class="'+(gw==="B"?"sel-win":"")+'">'+esc(shortName(teamB))+'</button>'+
+        '</div>'+
+      '</div>');
+    } else if(ga || gb || gw){
+      rows.push('<div class="fx-game">'+label+
+        '<div class="fx-players">'+esc(ga || "—")+'</div>'+
+        '<div class="fx-players">'+esc(gb || "—")+'</div>'+
+        (gw ? '<span class="status-badge win" style="font-size:11px;padding:3px 8px">'+esc(shortName(gw === "A" ? teamA : teamB))+'</span>' : '<span class="fx-game-label">—</span>')+
+      '</div>');
+    }
+  }
+  if(!rows.length) return "";
+  var ppg = sport.pointsPerGame || 1;
+  return '<div class="fx-games"><div class="fx-games-head">'+n+' games · '+ppg+' pt per game won</div>'+rows.join("")+'</div>';
 }
 
 function shortName(name){
@@ -772,8 +894,27 @@ function finalRow(sportKey){
   var finalDate = fov.date || sport.final.date;
   var finalTime = fov.time || sport.final.time;
 
+  var perGame = !!sport.gamesPerTie;
+  var finalGamesHtml = (perGame && canDecide) ? gameRows(sportKey, finalId, effA, effB, fov, "finalgame") : "";
+
   var teamsHtml, ctrls;
-  if(canEdit && w && !unlockedFinals[sportKey]){
+  if(perGame){
+    teamsHtml = canDecide
+      ? '<span class="fx-teams"><span>'+esc(effA)+'</span><span class="vs">vs</span><span>'+esc(effB)+'</span></span>'
+      : '<span class="fx-date">finalists not yet decided</span>';
+    if(canEdit && !canDecide){
+      var pgA = sport.groups[1].map(function(t){ return '<option value="'+esc(t)+'" '+(f.finalistA===t?"selected":"")+'>'+esc(t)+'</option>'; }).join("");
+      var pgB = sport.groups[2].map(function(t){ return '<option value="'+esc(t)+'" '+(f.finalistB===t?"selected":"")+'>'+esc(t)+'</option>'; }).join("");
+      teamsHtml = '<span class="fx-teams">' +
+        '<select data-finalist="'+sportKey+'" data-slot="A"><option value="">Group 1 finalist</option>'+pgA+'</select>' +
+        '<span class="vs">vs</span>' +
+        '<select data-finalist="'+sportKey+'" data-slot="B"><option value="">Group 2 finalist</option>'+pgB+'</select>' +
+      '</span>';
+    }
+    ctrls = canDecide
+      ? '<div class="controls">'+tieStatus(effA, effB, gameTally(f.games, sport.gamesPerTie), sport.gamesPerTie)+'</div>'
+      : '<span class="fx-date" style="flex-basis:100%;margin-top:6px">awaiting group results</span>';
+  } else if(canEdit && w && !unlockedFinals[sportKey]){
     teamsHtml = '<span class="fx-teams"><span>'+esc(effA)+'</span><span class="vs">vs</span><span>'+esc(effB)+'</span></span>';
     ctrls = '<div class="controls">' + resultStatus(w, effA, effB) +
       '<button data-edit-final="'+sportKey+'" class="change-btn">Change</button></div>';
@@ -814,6 +955,7 @@ function finalRow(sportKey){
     teamsHtml +
     ctrls +
     '</div>' +
+    finalGamesHtml +
     editForm +
   '</div>';
 }
@@ -834,7 +976,9 @@ function renderSport(sportKey){
   '<div class="card sport-intro"><div class="fmt">'+esc(sport.format)+'</div>'+venueLink(sport.venue, sport.venueMap, sport.venueUrl)+'</div>' +
   '<div class="sport-columns">' +
     '<div>' +
-      '<div class="section-title"><h2>Group Standings</h2><span class="sub">win '+(sport.winPoints||2)+' &middot; loss 0'+(sport.hasTie?" &middot; tie 1 each":"")+'</span></div>' +
+      '<div class="section-title"><h2>Group Standings</h2><span class="sub">'+(sport.gamesPerTie
+        ? (sport.pointsPerGame||1)+' pt per game won &middot; '+sport.gamesPerTie+' games per tie'
+        : 'win '+(sport.winPoints||2)+' &middot; loss 0'+(sport.hasTie?" &middot; tie 1 each":""))+'</span></div>' +
       '<div class="standings-col">'+renderGroupTable(sportKey,1)+renderGroupTable(sportKey,2)+'</div>' +
     '</div>' +
     '<div>' +
@@ -867,6 +1011,17 @@ function attachHandlers(){
       var id = btn.getAttribute("data-m"), w = btn.getAttribute("data-w");
       var cur = results[id] && results[id].winner;
       writeMatch(id, cur === w ? null : w);
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("button[data-game]"), function(btn){
+    btn.addEventListener("click", function(){
+      writeGame(btn.getAttribute("data-game"), btn.getAttribute("data-id"),
+        btn.getAttribute("data-gn"), btn.getAttribute("data-w"));
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("button[data-finalgame]"), function(btn){
+    btn.addEventListener("click", function(){
+      writeFinalGame(btn.getAttribute("data-finalgame"), btn.getAttribute("data-gn"), btn.getAttribute("data-w"));
     });
   });
   Array.prototype.forEach.call(document.querySelectorAll("button[data-edit-match]"), function(btn){
@@ -918,7 +1073,7 @@ function attachHandlers(){
     var save = function(){
       var id = inp.getAttribute("data-players"), slot = inp.getAttribute("data-slot");
       var patch = {};
-      patch[slot === "A" ? "playersA" : "playersB"] = inp.value.trim();
+      patch[slot === "A" ? "playersA" : (slot === "B" ? "playersB" : slot)] = inp.value.trim();
       writeFixture(id, patch, true);
     };
     inp.addEventListener("change", save);

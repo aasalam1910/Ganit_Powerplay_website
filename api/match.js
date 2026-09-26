@@ -1,6 +1,22 @@
 "use strict";
 var store = require("../lib/store");
 
+var WINNERS = { A: true, B: true, TIE: true };
+
+// {"1":"A","2":"B"} -> same, dropping anything that is not game 1-9 won by A or B.
+function sanitizeGames(games) {
+  if (!games || typeof games !== "object") return null;
+  var out = {};
+  var any = false;
+  Object.keys(games).forEach(function (k) {
+    if (!/^[1-9]$/.test(k)) return;
+    if (games[k] !== "A" && games[k] !== "B") return;
+    out[k] = games[k];
+    any = true;
+  });
+  return any ? out : null;
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).json({ error: "method_not_allowed" });
@@ -17,10 +33,17 @@ module.exports = async function handler(req, res) {
   }
   try {
     var state = await store.loadState({ fresh: true });
-    if (body.winner === null || body.winner === undefined) {
+    // Per-game ties (Badminton) send a games map and may have no winner yet,
+    // e.g. 1-1 with the decider still to play, so games alone keep the row alive.
+    var games = sanitizeGames(body.games);
+    var winner = WINNERS[body.winner] ? body.winner : null;
+    if (!winner && !games) {
       delete state.results[body.id];
     } else {
-      state.results[body.id] = { winner: body.winner };
+      var row = {};
+      if (winner) row.winner = winner;
+      if (games) row.games = games;
+      state.results[body.id] = row;
     }
     await store.saveState(state);
   } catch (e) {

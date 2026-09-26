@@ -2,6 +2,9 @@
 var store = require("../lib/store");
 
 var ALLOWED = { date: true, time: true, extra: true, note: true, teamA: true, teamB: true, playersA: true, playersB: true };
+// Per-game player names for multi-game ties: g1A, g1B, g2A, ... up to 9 games.
+var GAME_KEY = /^g[1-9][AB]$/;
+function allowedKey(k) { return ALLOWED[k] === true || GAME_KEY.test(k); }
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
@@ -23,7 +26,7 @@ module.exports = async function handler(req, res) {
     var next = Object.assign({}, cur);
     var patch = body.patch || {};
     Object.keys(patch).forEach(function (k) {
-      if (!ALLOWED[k]) return;
+      if (!allowedKey(k)) return;
       if (patch[k] === null || patch[k] === undefined || patch[k] === "") delete next[k];
       else next[k] = String(patch[k]);
     });
