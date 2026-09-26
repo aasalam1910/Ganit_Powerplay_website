@@ -218,7 +218,7 @@ footer .legend b{font-weight:700;font-family:'IBM Plex Mono',monospace;letter-sp
 
   <footer>
     <div class="legend"><b>MP</b> Matches Played (incl. finals) &middot; <b>W</b> Wins (incl. finals) &middot; <b>D</b> Draw &middot; <b>L</b> Losses (incl. finals) &middot; <b>Pts</b> Points</div>
-    Win = 2 pts (Cricket = 3 pts) &middot; Badminton = 1 pt per game won, 3 games per tie &middot; Loss = 0 pts &middot; Draw = 1 pt each (Cricket only). Scores sync live for everyone with this link; only the PIN holder can enter results.
+    Win = 2 pts (Cricket = 3 pts) &middot; Badminton = 3 games per tie, Games 1&ndash;2 = 1 pt, Game 3 = 2 pts &middot; Loss = 0 pts &middot; Draw = 1 pt each (Cricket only). Scores sync live for everyone with this link; only the PIN holder can enter results.
   </footer>
 </div>
 
@@ -257,7 +257,7 @@ var SPORTS = {
     final:{date:"Oct 10/11 (TBD)",time:"3:00–3:45 PM",note:"Overall Powerplay Final · Group 1 top team vs Group 2 top team"}
   },
   badminton: {
-    label:"Badminton", short:"BDM", hasTie:false, gamesPerTie:3, pointsPerGame:1,
+    label:"Badminton", short:"BDM", hasTie:false, gamesPerTie:3, gamePoints:[1,1,2],
     format:"21-pt games · 3 games/tie · 3:00–7:00 PM",
     venue:"GPS Badminton Academy, Thoraipakkam, Chennai",
     venueUrl:"https://maps.app.goo.gl/jVrshnWaNW9T7ynG6",
@@ -484,11 +484,10 @@ function postJSON(url, body){
 // Toggle one game of a per-game tie, then re-derive the tie winner from the games.
 function writeGame(sportKey, matchId, gameNum, slot){
   if(!canEdit) return;
-  var n = SPORTS[sportKey].gamesPerTie;
   var games = Object.assign({}, (results[matchId] || {}).games || {});
   if(games[gameNum] === slot) delete games[gameNum]; else games[gameNum] = slot;
-  var tally = gameTally(games, n);
-  var winner = tieWinner(tally, n);
+  var tally = gameTally(games, SPORTS[sportKey]);
+  var winner = tieWinner(tally);
   if(!tally.played) delete results[matchId];
   else results[matchId] = {winner:winner, games:games};
   delete unlockedMatches[matchId];
@@ -497,11 +496,10 @@ function writeGame(sportKey, matchId, gameNum, slot){
 }
 function writeFinalGame(sportKey, gameNum, slot){
   if(!canEdit) return;
-  var n = SPORTS[sportKey].gamesPerTie;
   var games = Object.assign({}, (finals[sportKey] || {}).games || {});
   if(games[gameNum] === slot) delete games[gameNum]; else games[gameNum] = slot;
-  var tally = gameTally(games, n);
-  writeFinal(sportKey, {games: tally.played ? games : null, winner: tieWinner(tally, n)});
+  var tally = gameTally(games, SPORTS[sportKey]);
+  writeFinal(sportKey, {games: tally.played ? games : null, winner: tieWinner(tally)});
 }
 function writeMatch(matchId, winner){
   if(!canEdit) return;
@@ -568,27 +566,46 @@ function sortedFixtures(sportKey){
 }
 
 // ---------- per-game ties ----------
-// Sports with gamesPerTie score each game, not the tie: Badminton is 3 games,
-// 1 pt per game won. The winners live in results[id].games / finals[sport].games
-// as {"1":"A","2":"B",...}; the tie winner is derived from them.
-function gameTally(games, n){
-  var out = {A:0, B:0, played:0};
+// Sports with gamesPerTie score each game, not the tie. Badminton is 3 games with
+// gamePoints:[1,1,2] - the decider is worth double - so a tie is worth 0-4 pts.
+// Winners live in results[id].games / finals[sport].games as {"1":"A","2":"B",...};
+// the tie winner is derived from them.
+function gamePoints(sport, gameNum){
+  var gp = sport.gamePoints;
+  if(gp && gp[gameNum - 1] != null) return gp[gameNum - 1];
+  return sport.pointsPerGame || 1;
+}
+function gameTally(games, sport){
+  var n = sport.gamesPerTie;
+  var out = {A:0, B:0, played:0, ptsA:0, ptsB:0, n:n};
   for(var i = 1; i <= n; i++){
     var v = games && games[i];
-    if(v === "A"){ out.A++; out.played++; }
-    else if(v === "B"){ out.B++; out.played++; }
+    if(v !== "A" && v !== "B") continue;
+    out[v]++; out.played++;
+    if(v === "A") out.ptsA += gamePoints(sport, i); else out.ptsB += gamePoints(sport, i);
   }
   return out;
 }
-function tieWinner(tally, n){
-  var need = Math.floor(n / 2) + 1;
+function tieWinner(tally){
+  var need = Math.floor(tally.n / 2) + 1;
   if(tally.A >= need) return "A";
   if(tally.B >= need) return "B";
   return null;
 }
 function matchTally(sportKey, matchId){
-  var n = SPORTS[sportKey].gamesPerTie;
-  return gameTally((results[matchId] || {}).games, n);
+  return gameTally((results[matchId] || {}).games, SPORTS[sportKey]);
+}
+// Uniform weights collapse to "3 games · 1 pt per game won"; otherwise
+// each game's value is spelled out, so Badminton reads Game 3 = 2 pts.
+function gamePointsLabel(sport){
+  var n = sport.gamesPerTie, first = gamePoints(sport, 1), uniform = true, parts = [], i;
+  for(i = 2; i <= n; i++) if(gamePoints(sport, i) !== first) uniform = false;
+  if(uniform) return n + ' games · ' + first + ' pt per game won';
+  for(i = 1; i <= n; i++){
+    var p = gamePoints(sport, i);
+    parts.push('Game ' + i + ' = ' + p + (p === 1 ? ' pt' : ' pts'));
+  }
+  return n + ' games · ' + parts.join(', ');
 }
 
 // ---------- standings ----------
@@ -607,9 +624,8 @@ function groupTable(sportKey, groupNum){
       // one side has taken the tie.
       var gt = matchTally(sportKey, mt.id);
       if(!gt.played) return;
-      var ppg = sport.pointsPerGame || 1;
-      a.pts += gt.A * ppg; b.pts += gt.B * ppg;
-      var tw = tieWinner(gt, sport.gamesPerTie);
+      a.pts += gt.ptsA; b.pts += gt.ptsB;
+      var tw = tieWinner(gt);
       if(tw){ a.p++; b.p++; if(tw === "A"){ a.w++; b.l++; } else { b.w++; a.l++; } }
       return;
     }
@@ -658,10 +674,9 @@ function sportScore(sportKey, team){
   var ef = effectiveFinal(sportKey);
   if(ef.decided){
     if(sport.gamesPerTie){
-      var ft = gameTally((finals[sportKey] || {}).games, sport.gamesPerTie);
-      var ppg = sport.pointsPerGame || 1;
-      if(ef.a === team) out.pts += ft.A * ppg;
-      else if(ef.b === team) out.pts += ft.B * ppg;
+      var ft = gameTally((finals[sportKey] || {}).games, sport);
+      if(ef.a === team) out.pts += ft.ptsA;
+      else if(ef.b === team) out.pts += ft.ptsB;
     } else if(ef.winTeam === team){
       out.pts += sport.winPoints || 2;
     }
@@ -764,9 +779,9 @@ function renderGroupTable(sportKey, groupNum){
   '</div>';
 }
 
-function tieStatus(teamA, teamB, tally, n){
+function tieStatus(teamA, teamB, tally){
   if(!tally.played) return '<span class="status-pending">Not yet played</span>';
-  var w = tieWinner(tally, n);
+  var n = tally.n, w = tieWinner(tally);
   if(w) return '<span class="status-badge win">'+esc(shortName(w === "A" ? teamA : teamB))+' won '+
     (w === "A" ? tally.A+'–'+tally.B : tally.B+'–'+tally.A)+'</span>';
   return '<span class="status-badge tie">'+tally.A+'–'+tally.B+' after '+tally.played+' of '+n+'</span>';
@@ -812,7 +827,7 @@ function fixtureRow(sportKey, mt){
 
   var ctrls;
   if(sport.gamesPerTie){
-    ctrls = '<div class="controls">'+tieStatus(mt.teamA, mt.teamB, matchTally(sportKey, mt.id), sport.gamesPerTie)+'</div>';
+    ctrls = '<div class="controls">'+tieStatus(mt.teamA, mt.teamB, matchTally(sportKey, mt.id))+'</div>';
   } else if(canEdit){
     if(w && !unlockedMatches[mt.id]){
       ctrls = '<div class="controls">' + resultStatus(w, mt.teamA, mt.teamB) +
@@ -852,7 +867,8 @@ function gameRows(sportKey, id, teamA, teamB, ov, kind){
   for(var gi = 1; gi <= n; gi++){
     var ga = ov["g"+gi+"A"] || "", gb = ov["g"+gi+"B"] || "";
     var gw = games[gi];
-    var label = '<span class="fx-game-label">Game '+gi+'</span>';
+    var gpts = gamePoints(sport, gi);
+    var label = '<span class="fx-game-label">Game '+gi+(gpts !== 1 ? ' · '+gpts+'pt' : '')+'</span>';
     if(canEdit){
       rows.push('<div class="fx-game">'+label+
         '<input type="text" class="fx-players-input" data-players="'+id+'" data-slot="g'+gi+'A" value="'+esc(ga)+'" placeholder="'+esc(shortName(teamA))+' players">'+
@@ -871,8 +887,7 @@ function gameRows(sportKey, id, teamA, teamB, ov, kind){
     }
   }
   if(!rows.length) return "";
-  var ppg = sport.pointsPerGame || 1;
-  return '<div class="fx-games"><div class="fx-games-head">'+n+' games · '+ppg+' pt per game won</div>'+rows.join("")+'</div>';
+  return '<div class="fx-games"><div class="fx-games-head">'+esc(gamePointsLabel(sport))+'</div>'+rows.join("")+'</div>';
 }
 
 function shortName(name){
@@ -912,7 +927,7 @@ function finalRow(sportKey){
       '</span>';
     }
     ctrls = canDecide
-      ? '<div class="controls">'+tieStatus(effA, effB, gameTally(f.games, sport.gamesPerTie), sport.gamesPerTie)+'</div>'
+      ? '<div class="controls">'+tieStatus(effA, effB, gameTally(f.games, sport))+'</div>'
       : '<span class="fx-date" style="flex-basis:100%;margin-top:6px">awaiting group results</span>';
   } else if(canEdit && w && !unlockedFinals[sportKey]){
     teamsHtml = '<span class="fx-teams"><span>'+esc(effA)+'</span><span class="vs">vs</span><span>'+esc(effB)+'</span></span>';
@@ -977,7 +992,7 @@ function renderSport(sportKey){
   '<div class="sport-columns">' +
     '<div>' +
       '<div class="section-title"><h2>Group Standings</h2><span class="sub">'+(sport.gamesPerTie
-        ? (sport.pointsPerGame||1)+' pt per game won &middot; '+sport.gamesPerTie+' games per tie'
+        ? esc(gamePointsLabel(sport))
         : 'win '+(sport.winPoints||2)+' &middot; loss 0'+(sport.hasTie?" &middot; tie 1 each":""))+'</span></div>' +
       '<div class="standings-col">'+renderGroupTable(sportKey,1)+renderGroupTable(sportKey,2)+'</div>' +
     '</div>' +
